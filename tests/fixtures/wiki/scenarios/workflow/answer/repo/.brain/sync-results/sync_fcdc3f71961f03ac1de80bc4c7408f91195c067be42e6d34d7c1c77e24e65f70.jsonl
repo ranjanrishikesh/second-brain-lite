@@ -1,0 +1,7 @@
+{"command":"sync","generated_at":"2026-09-04T00:00:00+00:00","schema_version":1,"type":"header"}
+{"data":{"path":"alpha.txt"},"kind":"hashed_path","sequence":1,"type":"event"}
+{"data":{"path":"exception.txt"},"kind":"hashed_path","sequence":2,"type":"event"}
+{"data":{"path":"unavailable.txt"},"kind":"hashed_path","sequence":3,"type":"event"}
+{"data":{"anchors":[{"kind":"line","value":"4"}],"content_sha256":"133390ba36589a8a5a8c896cab7236d2a5436c83b6758f775b0d3de528507196","derivation_id":"drv_d1a0d7e4ad37bcf76dddf9cc73b9b3950fddae30198d111dec027dfac18009de","extracted_path":"sources/extracted/alpha.txt/133390ba36589a8a5a8c896cab7236d2a5436c83b6758f775b0d3de528507196/drv_d1a0d7e4ad37bcf76dddf9cc73b9b3950fddae30198d111dec027dfac18009de.md","output_sha256":"92af7f99b00b123c2ce04c4aca2ced33c6b664ddf5257a924c0d1549b9056f9b","quality_state":"ok","raw_path":"alpha.txt","source_id":"src_0b07c1a90cd7fda7dacb804718961b3d27739f3d725e0925cb555e92a7835772"},"kind":"new_active_representation","sequence":4,"type":"event"}
+{"data":{"code":"source_failed","details":{},"message":"src-unavailable is failed","path":null},"kind":"coverage_gap","sequence":5,"type":"event"}
+{"corpus_revision":"826135e493e0f4bdc571dcc4eadd1dc37dc4b3b52110c73339d236508b0d56af","event_count":5,"event_counts":{"citation_rewrite":0,"coverage_gap":1,"handoff_source_id":0,"hashed_path":3,"new_active_representation":1},"events_sha256":"f47634825806264d9742edcc48bdf47d661f3598b3efaab26dc41c3fd7730aa8","type":"trailer"}

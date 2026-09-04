@@ -1,0 +1,421 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "source-record.v1.schema.json",
+  "title": "Second Brain Lite source record v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "source_id",
+    "current_raw_path",
+    "previous_raw_paths",
+    "media_type",
+    "byte_size",
+    "state",
+    "versions",
+    "active_content_sha256",
+    "derivations",
+    "active_derivation_id",
+    "last_attempt",
+    "diagnostics",
+    "created_at",
+    "inspected_at",
+    "updated_at",
+    "adoption_events",
+    "url_descriptor"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "source_id": {
+      "$ref": "#/$defs/sourceId",
+      "description": "For file-backed records, hashes the creation path and the root checksum of the complete ordered adoption chain. URL identity remains governed by the URL schema-v1 contract."
+    },
+    "current_raw_path": { "$ref": "#/$defs/rawPath" },
+    "previous_raw_paths": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/rawPath" },
+      "uniqueItems": true
+    },
+    "media_type": { "$ref": "#/$defs/nonemptyString" },
+    "byte_size": { "$ref": "#/$defs/nonnegativeInteger" },
+    "state": { "$ref": "#/$defs/sourceState" },
+    "versions": {
+      "type": "object",
+      "propertyNames": { "$ref": "#/$defs/sha256" },
+      "additionalProperties": { "$ref": "#/$defs/contentVersion" }
+    },
+    "active_content_sha256": {
+      "oneOf": [
+        { "$ref": "#/$defs/sha256" },
+        { "type": "null" }
+      ]
+    },
+    "derivations": {
+      "type": "object",
+      "propertyNames": { "$ref": "#/$defs/derivationId" },
+      "additionalProperties": { "$ref": "#/$defs/derivation" }
+    },
+    "active_derivation_id": {
+      "oneOf": [
+        { "$ref": "#/$defs/derivationId" },
+        { "type": "null" }
+      ]
+    },
+    "last_attempt": {
+      "oneOf": [
+        { "$ref": "#/$defs/processingAttempt" },
+        { "type": "null" }
+      ]
+    },
+    "diagnostics": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/diagnostic" }
+    },
+    "created_at": { "$ref": "#/$defs/timestamp" },
+    "inspected_at": { "$ref": "#/$defs/timestamp" },
+    "updated_at": { "$ref": "#/$defs/timestamp" },
+    "adoption_events": {
+      "type": "array",
+      "readOnly": true,
+      "description": "For file-backed records, the runtime boundary requires exactly versions minus one events forming a complete ordered root-to-active checksum chain.",
+      "items": { "$ref": "#/$defs/versionAdoptionEvent" }
+    },
+    "url_descriptor": {
+      "oneOf": [
+        { "$ref": "#/$defs/urlDescriptor" },
+        { "type": "null" }
+      ]
+    }
+  },
+  "anyOf": [
+    {
+      "properties": {
+        "versions": { "minProperties": 1 }
+      }
+    },
+    {
+      "properties": {
+        "versions": { "maxProperties": 0 },
+        "derivations": { "maxProperties": 0 },
+        "state": { "const": "awaiting_approval" },
+        "active_content_sha256": { "type": "null" },
+        "active_derivation_id": { "type": "null" },
+        "url_descriptor": { "$ref": "#/$defs/urlDescriptor" }
+      }
+    }
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "url_descriptor": { "type": "null" }
+        }
+      },
+      "then": {
+        "properties": {
+          "active_content_sha256": { "$ref": "#/$defs/sha256" }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "nonemptyString": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": ".*\\S.*"
+    },
+    "nonnegativeInteger": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "sourceId": {
+      "type": "string",
+      "pattern": "^src_[0-9a-f]{64}$"
+    },
+    "derivationId": {
+      "type": "string",
+      "pattern": "^drv_[0-9a-f]{64}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{6})?Z$"
+    },
+    "date": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "rawPath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?![A-Za-z]:)(?!sources/raw(?:/|$))(?!.*(?:^|/)\\.\\.?(?:/|$))(?!.*//)(?!.*\\\\)[^/]+(?:/[^/]+)*$"
+    },
+    "repositoryPath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.?(?:/|$))(?!.*//)(?!.*\\\\)[^/]+(?:/[^/]+)*$"
+    },
+    "outputPath": {
+      "type": "string",
+      "pattern": "^(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.?(?:/|$))sources/extracted/(?!.*//)(?!.*\\\\)[^/]+(?:/[^/]+)*$"
+    },
+    "sourceState": {
+      "enum": [
+        "pending",
+        "extracting",
+        "ok",
+        "warning",
+        "needs_agent",
+        "failed",
+        "unsupported",
+        "integrity_error",
+        "awaiting_approval"
+      ]
+    },
+    "jsonValue": {
+      "oneOf": [
+        { "type": ["string", "number", "boolean", "null"] },
+        {
+          "type": "array",
+          "items": { "$ref": "#/$defs/jsonValue" }
+        },
+        {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/jsonValue" }
+        }
+      ]
+    },
+    "fingerprint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "byte_size", "mtime_ns"],
+      "properties": {
+        "path": { "$ref": "#/$defs/rawPath" },
+        "byte_size": { "$ref": "#/$defs/nonnegativeInteger" },
+        "mtime_ns": { "$ref": "#/$defs/nonnegativeInteger" }
+      }
+    },
+    "retrievalMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requested_url",
+        "final_url",
+        "redirects",
+        "retrieved_at",
+        "detected_media_type",
+        "byte_size",
+        "sha256",
+        "approval_event_id",
+        "approval_recorded_at",
+        "approval_scope",
+        "approval_note"
+      ],
+      "properties": {
+        "requested_url": { "$ref": "#/$defs/nonemptyString" },
+        "final_url": { "$ref": "#/$defs/nonemptyString" },
+        "redirects": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/nonemptyString" }
+        },
+        "retrieved_at": { "$ref": "#/$defs/timestamp" },
+        "detected_media_type": { "$ref": "#/$defs/nonemptyString" },
+        "byte_size": { "$ref": "#/$defs/nonnegativeInteger" },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "approval_event_id": { "$ref": "#/$defs/nonemptyString" },
+        "approval_recorded_at": { "$ref": "#/$defs/timestamp" },
+        "approval_scope": { "$ref": "#/$defs/nonemptyString" },
+        "approval_note": { "$ref": "#/$defs/nonemptyString" }
+      }
+    },
+    "contentVersion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sha256",
+        "raw_path",
+        "byte_size",
+        "fingerprint",
+        "first_seen_at",
+        "retrieval_events"
+      ],
+      "properties": {
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "raw_path": { "$ref": "#/$defs/rawPath" },
+        "byte_size": { "$ref": "#/$defs/nonnegativeInteger" },
+        "fingerprint": { "$ref": "#/$defs/fingerprint" },
+        "first_seen_at": { "$ref": "#/$defs/timestamp" },
+        "retrieval_events": {
+          "type": "array",
+          "readOnly": true,
+          "items": { "$ref": "#/$defs/retrievalMetadata" }
+        }
+      }
+    },
+    "anchor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "value"],
+      "properties": {
+        "kind": {
+          "enum": ["line", "page", "slide", "sheet", "section", "row", "block"]
+        },
+        "value": { "$ref": "#/$defs/nonemptyString" }
+      }
+    },
+    "deterministicMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["converter_id", "converter_version"],
+      "properties": {
+        "converter_id": { "$ref": "#/$defs/nonemptyString" },
+        "converter_version": { "$ref": "#/$defs/nonemptyString" }
+      }
+    },
+    "agentMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["handoff_id", "agent_revision", "note"],
+      "properties": {
+        "handoff_id": {
+          "type": "string",
+          "pattern": "^hnd_[0-9a-f]{64}$"
+        },
+        "agent_revision": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]*$"
+        },
+        "note": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^(?!\\s)(?!.*\\s$)[^\\u0000]+$"
+        }
+      }
+    },
+    "derivation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "derivation_id",
+        "source_sha256",
+        "extractor_id",
+        "extractor_version",
+        "config_sha256",
+        "output_path",
+        "output_sha256",
+        "output_byte_size",
+        "output_mtime_ns",
+        "quality_state",
+        "anchors",
+        "created_at",
+        "method",
+        "method_metadata"
+      ],
+      "properties": {
+        "derivation_id": { "$ref": "#/$defs/derivationId" },
+        "source_sha256": { "$ref": "#/$defs/sha256" },
+        "extractor_id": { "$ref": "#/$defs/nonemptyString" },
+        "extractor_version": { "$ref": "#/$defs/nonemptyString" },
+        "config_sha256": { "$ref": "#/$defs/sha256" },
+        "output_path": { "$ref": "#/$defs/outputPath" },
+        "output_sha256": { "$ref": "#/$defs/sha256" },
+        "output_byte_size": { "$ref": "#/$defs/nonnegativeInteger" },
+        "output_mtime_ns": { "$ref": "#/$defs/nonnegativeInteger" },
+        "quality_state": { "enum": ["ok", "warning"] },
+        "anchors": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/anchor" }
+        },
+        "created_at": { "$ref": "#/$defs/timestamp" },
+        "method": { "enum": ["deterministic", "agent"] },
+        "method_metadata": { "type": "object" }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "method": { "const": "deterministic" },
+            "method_metadata": { "$ref": "#/$defs/deterministicMetadata" }
+          }
+        },
+        {
+          "properties": {
+            "method": { "const": "agent" },
+            "method_metadata": { "$ref": "#/$defs/agentMetadata" }
+          }
+        }
+      ]
+    },
+    "processingAttempt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "input_sha256",
+        "extractor_id",
+        "extractor_version",
+        "config_sha256",
+        "prerequisite_digest",
+        "outcome",
+        "attempted_at",
+        "diagnostic_codes"
+      ],
+      "properties": {
+        "input_sha256": { "$ref": "#/$defs/sha256" },
+        "extractor_id": { "$ref": "#/$defs/nonemptyString" },
+        "extractor_version": { "$ref": "#/$defs/nonemptyString" },
+        "config_sha256": { "$ref": "#/$defs/sha256" },
+        "prerequisite_digest": { "$ref": "#/$defs/sha256" },
+        "outcome": { "$ref": "#/$defs/sourceState" },
+        "attempted_at": { "$ref": "#/$defs/timestamp" },
+        "diagnostic_codes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/nonemptyString" }
+        }
+      }
+    },
+    "diagnostic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "message", "path", "details"],
+      "properties": {
+        "code": { "$ref": "#/$defs/nonemptyString" },
+        "message": { "$ref": "#/$defs/nonemptyString" },
+        "path": {
+          "oneOf": [
+            { "$ref": "#/$defs/repositoryPath" },
+            { "type": "null" }
+          ]
+        },
+        "details": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/jsonValue" }
+        }
+      }
+    },
+    "versionAdoptionEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["prior_sha256", "adopted_sha256", "approval_note", "recorded_at"],
+      "properties": {
+        "prior_sha256": { "$ref": "#/$defs/sha256" },
+        "adopted_sha256": { "$ref": "#/$defs/sha256" },
+        "approval_note": { "$ref": "#/$defs/nonemptyString" },
+        "recorded_at": { "$ref": "#/$defs/timestamp" }
+      }
+    },
+    "urlDescriptor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["url", "description", "added", "fingerprint"],
+      "properties": {
+        "url": { "$ref": "#/$defs/nonemptyString" },
+        "description": { "$ref": "#/$defs/nonemptyString" },
+        "added": { "$ref": "#/$defs/date" },
+        "fingerprint": { "$ref": "#/$defs/fingerprint" }
+      }
+    }
+  }
+}

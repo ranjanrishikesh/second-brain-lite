@@ -1,0 +1,12 @@
+# Synchronize Knowledge
+
+1. Run `./brain sync` before every substantive knowledge question.
+2. Read the bounded report, verify its content-addressed `result_manifest`, and stream every exact event to completion. Apply/deduplicate the result ID, citation rewrites, and newly active representations, then durably record the seen result ID; the displayed arrays are deterministic samples, not complete sets. Only after those consumer-visible steps succeed, run `./brain source acknowledge-sync-result --result-id "$result_id"`. A partial/failed stream is never acknowledged, and retry therefore returns the exact pending result. `complete` exits `0`; every unresolved coverage gap produces `complete_with_gaps` and exit `1`.
+3. Continue pending, failed, unsupported, warning-quality, integrity, approval-gated, agent-assisted, or safely uninspectable work through the applicable agent workflow. Direct synchronization is deterministic and local: it does not install tools, browse the web, invoke agent vision, or capture a URL.
+4. Treat URL descriptors as local control metadata. They remain `awaiting_approval` until an agent explains the evidence gap and receives explicit approval for public-web access.
+5. Use the synchronized evidence when answering the question. Plan 2 synchronization does not create or update wiki pages; later knowledge workflows own wiki changes.
+6. Run `./brain validate --full` before a completed handoff or readiness claim so every retained raw version and active or inactive derivation is rehashed. This integrity result is necessary but not sufficient: require the sync report or a fresh `./brain status` to be gap-free as the coverage half of readiness.
+
+If manifest finalization, pending publication, summary publication, source-lock cleanup, output, or consumer handling is uncertain, preserve the same result reference and rerun sync. Recovery proves the full canonical ledger checkpoint, repairs the generated projection when needed, and replays that result ID instead of replacing its exact event set with an empty delta. A repeated acknowledgement of the same bounded receipt is safe; a wrong ID cannot clear a newer pending result.
+
+Synchronization, rather than validation, decides whether an active derivation is current under today's extractor registry. Validation checks each retained historical derivation against its stored identity, path, provenance, and bytes, so approved extractor evolution does not invalidate immutable older artifacts.

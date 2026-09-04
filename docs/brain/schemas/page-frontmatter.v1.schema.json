@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "page-frontmatter.v1.schema.json",
+  "title": "Second Brain Lite page frontmatter v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "title", "description", "type", "aliases", "created", "updated"],
+  "properties": {
+    "id": { "type": "string", "minLength": 1, "pattern": ".*\\S.*" },
+    "title": { "type": "string", "minLength": 1, "pattern": ".*\\S.*" },
+    "description": { "type": "string", "minLength": 1, "pattern": ".*\\S.*" },
+    "type": { "type": "string", "minLength": 1, "pattern": ".*\\S.*" },
+    "aliases": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1, "pattern": ".*\\S.*" },
+      "uniqueItems": true
+    },
+    "created": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+    "updated": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" }
+  }
+}

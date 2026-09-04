@@ -1,0 +1,6 @@
+#!/usr/bin/env python3
+"""Run the shared CLI, including bounded, resumable evidence searches."""
+
+from brainlib.cli import main
+
+raise SystemExit(main())

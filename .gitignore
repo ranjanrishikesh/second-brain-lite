@@ -1,0 +1,12 @@
+.brain/
+!tests/fixtures/wiki/scenarios/workflow/answer/repo/.brain/
+tests/fixtures/wiki/scenarios/workflow/answer/repo/.brain/*
+!tests/fixtures/wiki/scenarios/workflow/answer/repo/.brain/sync-results/
+tests/fixtures/wiki/scenarios/workflow/answer/repo/.brain/sync-results/*
+!tests/fixtures/wiki/scenarios/workflow/answer/repo/.brain/sync-results/sync_fcdc3f71961f03ac1de80bc4c7408f91195c067be42e6d34d7c1c77e24e65f70.jsonl
+.context/
+.pytest_cache/
+__pycache__/
+*.py[cod]
+.coverage
+htmlcov/
