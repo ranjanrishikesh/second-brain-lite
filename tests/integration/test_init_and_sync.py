@@ -393,6 +393,32 @@ def test_status_distinguishes_pristine_from_initialized_empty(repo_root: Path) -
     assert set(data) >= {"state_counts", "warnings", "failures", "needs_agent"}
 
 
+def test_greeting_status_reports_uningested_originals_without_mutating_brain(
+    repo_root: Path,
+) -> None:
+    original = repo_root / "sources/raw/meeting.md"
+    original.write_text("# Meeting\n\nProject Alpha launches in October.\n", encoding="utf-8")
+
+    def retained_files() -> dict[str, bytes]:
+        return {
+            path.relative_to(repo_root).as_posix(): path.read_bytes()
+            for folder in ("sources", "wiki", ".brain")
+            for path in (repo_root / folder).rglob("*")
+            if path.is_file()
+        }
+
+    before = retained_files()
+    for _ in range(2):
+        result = run_brain(repo_root, "--json", "status")
+        payload = json.loads(result.stdout)
+        assert result.returncode == 1
+        assert payload["data"]["status"] == "complete_with_gaps"
+        assert payload["data"]["warnings"]
+        assert "meeting.md" in result.stdout
+        assert payload["data"]["state_counts"] == {state.value: 0 for state in SourceState}
+        assert retained_files() == before
+
+
 def test_status_never_constructs_processor_or_runs_prerequisite_probe(
     repo_root: Path,
 ) -> None:

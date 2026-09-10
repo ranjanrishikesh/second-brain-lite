@@ -165,7 +165,6 @@ def test_snapshot_receipts_are_consumed_and_acknowledged_before_follow_up_work()
 def test_detailed_receipt_docs_expose_the_client_cli_not_internal_python() -> None:
     client_docs = (
         ROOT / "BRAIN.md",
-        ROOT / "README.md",
         ROOT / "docs/brain/workflows/initialize.md",
         ROOT / "docs/brain/workflows/synchronize.md",
         ROOT / "docs/brain/workflows/answer.md",

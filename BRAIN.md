@@ -32,6 +32,8 @@ Routine grounded additions may proceed. Ask first for public-web access, depende
 
 ## Canonical document index
 
+- [Agent command and extraction reference](docs/brain/commands.md)
+
 Policies:
 
 - [Source handling](docs/brain/policies/source-handling.md)
@@ -42,6 +44,7 @@ Policies:
 
 Workflows:
 
+- [Onboarding, saving, and returning](docs/brain/workflows/onboarding.md)
 - [Initialize](docs/brain/workflows/initialize.md)
 - [Synchronize](docs/brain/workflows/synchronize.md)
 - [Answer](docs/brain/workflows/answer.md)

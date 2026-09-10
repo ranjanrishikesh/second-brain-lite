@@ -20,3 +20,9 @@ Read `BRAIN.md`, `docs/brain/workflows/initialize.md`, `docs/brain/policies/sour
 9. For normal user initialization, run `./brain --json status` and `./brain --json validate --full`. Pytest is an implementation/PR gate in `brain-validate`, not an initialization step.
 
 A `complete_with_gaps` result is not complete initialization. Report every pending, failed, unsupported, warning, integrity, approval, or agent gap. Never create wiki pages during initialization. Never install, browse, mutate raw originals, or change the extractor allowlist without its separate approval.
+
+If initialization completes with no source files, say that the brain is empty,
+invite originals in `sources/raw/`, and offer to process them when added.
+Otherwise summarize usable sources and remaining gaps, then invite the first
+question. Follow `docs/brain/workflows/onboarding.md` for a brief save-to-main
+reminder when files changed; do not commit without a user request.

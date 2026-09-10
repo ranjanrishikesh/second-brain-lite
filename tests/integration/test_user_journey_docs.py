@@ -23,30 +23,37 @@ def test_agents_routes_six_request_classes_without_copying_policies() -> None:
 def test_readme_documents_complete_empty_template_journey() -> None:
     text = (ROOT / "README.md").read_text(encoding="utf-8")
     ordered = (
-        "Create a private repository",
+        "Use this template → Create a new repository",
+        "Create repository from template",
+        "Open **your new repository**",
         "sources/raw/",
-        "initialize this brain",
-        "dependency",
-        "sources/ledger.md",
-        "Ask a question",
-        "Add new sources",
-        "validate --full",
+        "Initialize this brain",
+        "What can I add?",
+        "Use it through conversation",
+        "Save this work to main",
+        "latest main",
     )
     offsets = [text.index(item) for item in ordered]
     assert offsets == sorted(offsets)
     for warning in (
-        "ordinary Git objects",
-        "file-size limits",
+        "Private",
+        "Include all branches** unchecked",
+        "extra tools or agent assistance",
         "Git history",
         "public web",
-        "one logical commit",
+        "_versions/",
+        "_web/",
     ):
         assert warning in text
-    assert "does not reconvert unchanged sources" in text
-    assert (
-        "Commit `sources/raw/`, `sources/extracted/`, `sources/ledger/`, "
-        "`sources/ledger.md`, and `wiki/`"
-    ) in text
+    assert len(text.split()) <= 500
+    for internal in ("./brain", "python3", "pytest", "manifest_path", "```bash"):
+        assert internal not in text
+    for prompt in ("Hi", "I added more files", "What still needs attention", "Resume initialization"):
+        assert prompt in text
+
+
+def test_agent_reference_retains_command_examples_outside_user_readme() -> None:
+    text = (ROOT / "docs/brain/commands.md").read_text(encoding="utf-8")
     for command in (
         "./brain --json doctor",
         "./brain --json init",
@@ -72,8 +79,35 @@ def test_readme_documents_complete_empty_template_journey() -> None:
     assert text.index("source consume-sync-result") < text.index("source acknowledge-sync-result")
 
 
-def test_readme_documents_the_committed_extractor_allowlist_without_drift() -> None:
-    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+def test_onboarding_is_discoverable_and_preserves_existing_workflows() -> None:
+    agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
+    workflow = ROOT / "docs/brain/workflows/onboarding.md"
+    assert workflow.relative_to(ROOT).as_posix() in agents
+    assert (ROOT / "CLAUDE.md").resolve() == ROOT / "AGENTS.md"
+    text = workflow.read_text(encoding="utf-8")
+    for skill in ("brain-initialize", "brain-answer", "brain-web-research", "brain-validate"):
+        assert skill in text
+        assert (ROOT / ".agents/skills" / skill / "SKILL.md").is_file()
+    for state in (
+        "Pristine template, no originals",
+        "Originals present but not ingested",
+        "Previously initialized but empty",
+        "Existing brain with usable sources",
+        "Pending, failed, approval-gated, or interrupted work",
+    ):
+        assert state in text
+    assert "./brain --json status" in text
+    assert "A greeting alone does not authorize ingestion" in text
+    assert "a local commit, branch push, or open PR is not a merge" in text
+    assert "Preserve dirty or diverged work" in text
+    for skill in ("brain-initialize", "brain-answer"):
+        assert workflow.relative_to(ROOT).as_posix() in (
+            ROOT / ".agents/skills" / skill / "SKILL.md"
+        ).read_text(encoding="utf-8")
+
+
+def test_agent_reference_documents_the_committed_extractor_allowlist_without_drift() -> None:
+    readme = (ROOT / "docs/brain/commands.md").read_text(encoding="utf-8")
     registry = tomllib.loads((ROOT / "config/extractors.toml").read_text(encoding="utf-8"))
     for extractor in registry["extractors"]:
         assert f"`{extractor['id']}`" in readme
@@ -99,6 +133,8 @@ def test_readme_documents_the_committed_extractor_allowlist_without_drift() -> N
 def test_brain_manual_links_every_canonical_document() -> None:
     text = (ROOT / "BRAIN.md").read_text(encoding="utf-8")
     for relative in (
+        "docs/brain/commands.md",
+        "docs/brain/workflows/onboarding.md",
         "docs/brain/policies/source-handling.md",
         "docs/brain/policies/approvals.md",
         "docs/brain/policies/citations.md",
@@ -151,13 +187,12 @@ def test_user_docs_preserve_manifest_and_evidence_packet_rulings() -> None:
     manual = (ROOT / "BRAIN.md").read_text(encoding="utf-8")
     initialize = (ROOT / "docs/brain/workflows/initialize.md").read_text(encoding="utf-8")
     synchronize = (ROOT / "docs/brain/workflows/synchronize.md").read_text(encoding="utf-8")
-    readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    for text in (manual, initialize, synchronize, readme):
+    for text in (manual, initialize, synchronize):
         assert './brain --json source consume-sync-result --result-id "$result_id"' in text
         assert "manifest_path" in text
         assert "source acknowledge-sync-result" in text
         assert "handoff_delivery" in text
-    for text in (manual, initialize, readme):
+    for text in (manual, initialize):
         assert "data.registration.active_representation" in text
         assert "SnapshotResult.active_representation" in text
     assert "no supported wiki record proceeds directly to the three source passes" in manual
@@ -170,7 +205,7 @@ def test_user_docs_preserve_activation_freshness_and_readiness_boundaries() -> N
     synchronize = (ROOT / "docs/brain/workflows/synchronize.md").read_text(encoding="utf-8")
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
 
-    for text in (manual, initialize, readme):
+    for text in (manual, initialize):
         assert "handoff.kind == rendered_web_capture" in text
         assert "normal allowlisted processing directly activates" in text
         assert "non-null `SnapshotResult.active_representation`" in text
@@ -186,6 +221,6 @@ def test_user_docs_preserve_activation_freshness_and_readiness_boundaries() -> N
         "no unresolved pending, failed, unsupported, warning, integrity, approval, "
         "agent, or coverage gaps"
     )
-    for text in (manual, initialize, synchronize, readme):
+    for text in (manual, initialize, synchronize):
         assert readiness in text
         assert "./brain --json validate --full" in text

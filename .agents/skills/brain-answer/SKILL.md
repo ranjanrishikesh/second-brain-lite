@@ -49,6 +49,11 @@ For every write/delete, start a batched `./brain --json links candidates "$chang
 
 ## Validate and answer
 
+For an empty corpus, explain that there is no local evidence and invite files
+in `sources/raw/`; do not invent a supported answer or an empty evidence packet.
+After meaningful persisted changes, follow the save-and-return guidance in
+`docs/brain/workflows/onboarding.md`. A save reminder is not permission to commit.
+
 Run `./brain --json links check` and `./brain --json validate --full`. Repair deterministic failures through another staged wiki-apply transaction and request an independent `brain-auditor` review for material knowledge changes. Answer with unresolved conflict and coverage gaps disclosed; use partial/unanswered status rather than an unsupported answer.
 
 If local evidence is insufficient, offer `brain-web-research`; do not browse before explicit approval. After approved captures are active, rerun Pass 1, Pass 2, and Pass 3 before changing the persisted synthesis.
