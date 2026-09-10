@@ -11153,6 +11153,72 @@ def test_public_web_route_projects_one_complete_fake_candidate_atomically(
         assert {"marker", "event_record", "assertion", "run_manifest"} <= types
 
 
+def test_public_web_route_retains_a_registered_nonzero_phase_one_exit(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A real-client launch failure is evidence, never a thrown-away bridge error."""
+
+    plan = runner.prepare_registered_actual_scenario(
+        client="claude", scenario_id="web-approval-and-capture",
+        scratch_root=tmp_path / "registered-nonzero",
+    )
+    original_popen = runner.subprocess.Popen
+    client_spawns: list[list[str]] = []
+
+    def probe(
+        *, argv: list[str], cwd: Path, environment: dict[str, str], probe_runner: object,
+    ) -> subprocess.CompletedProcess[bytes]:
+        del cwd, environment
+        assert probe_runner is None
+        output = b"2.1.251 (nonzero fixture)\n" if argv[-1] == "--version" else b"stream-json help\n"
+        return subprocess.CompletedProcess(argv, 0, output, b"")
+
+    class FailingProcess:
+        def __init__(self) -> None:
+            self.stdin = _Task7dRecordingInput()
+            self.stdout = _task7d_closed_pipe(b"not logged in\n")
+            self.stderr = _task7d_closed_pipe(b"authentication failed\n")
+
+        def wait(self, timeout: float | None = None) -> int:
+            assert timeout is not None and timeout > 0
+            assert self.stdout.closed and self.stderr.closed
+            return 1
+
+    def popen(argv: list[str], **kwargs: object) -> object:
+        if argv[0] == str(plan.registration.resolved_path):
+            client_spawns.append(list(argv))
+            return FailingProcess()
+        return original_popen(argv, **kwargs)
+
+    monkeypatch.setattr(runner.WorkspaceSnapshotter, "_staged_paths", lambda _self: ())
+    monkeypatch.setattr(runner, "_registered_probe", probe)
+    monkeypatch.setattr(runner.subprocess, "Popen", popen)
+    outcome = runner._run_registered_actual_public_web_route(
+        runner._RegisteredActualAuthority(plan),
+    )
+
+    assert client_spawns and len(client_spawns) == 1
+    assert outcome.log["result"] == "incomplete"
+    assert outcome.log["incomplete_reasons"] == [
+        "client_exit_nonzero", "unsupported_native_format",
+    ]
+    assert outcome.log["events"] == []
+    assert outcome.log["receipts"] == []
+    assert outcome.log["deliveries"] == []
+    assert outcome.log["repository_assertions"] == []
+    assert outcome.log["executions"] == [{
+        "id": "execution-1", "phase": "approval", "kind": "actual_client_process",
+        "policy_id": "policy-1", "process_id": "process-1", "transcript_id": "transcript-1",
+    }]
+    index = json.loads((outcome.log_path.parent / "evidence-index.json").read_text())
+    entries = {entry["id"]: entry for entry in index["entries"]}
+    assert {"policy-1", "process-1", "transcript-1", "stderr-1", "trace-execution-1"} <= set(entries)
+    assert not {"web-approval", "fixture-capability", "policy-2", "process-2"} & set(entries)
+    process = json.loads((outcome.log_path.parent / entries["process-1"]["relative_path"]).read_text())
+    assert process["exit_code"] == 1
+
+
 def _task7d_actual_phase_two_replayable_receipt_seed(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

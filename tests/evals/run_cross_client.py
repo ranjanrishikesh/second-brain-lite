@@ -5326,6 +5326,10 @@ def _run_registered_actual_plan(authority: _RegisteredActualAuthority) -> "RunOu
     prepared_run = _prepare_registered_actual_run(authority)
     prepared_phase = _prepare_registered_actual_phase_one(prepared_run)
     live_phase = _launch_actual_registered_live_phase(prepared_phase)
+    if live_phase.capture.exit_code != 0:
+        return _registered_actual_phase_one_launch_failure_outcome(
+            prepared_phase, live_phase,
+        )
     diagnostic = _index_registered_actual_phase_one_diagnostic(prepared_phase, live_phase)
     metadata = _registered_actual_scenario_fixture_metadata(prepared_run, plan)
     scenario = metadata.scenario()
@@ -20880,6 +20884,117 @@ def _finalize_registered_actual_public_pass(
     )
 
 
+def _registered_actual_phase_one_launch_failure_outcome(
+    prepared_phase: _RegisteredActualPreparedPhase,
+    live_phase: RegisteredLivePhase,
+) -> "RunOutcome":
+    """Persist a non-zero registered phase-one exit as incomplete evidence only.
+
+    A live client can fail before producing a usable transcript (for example,
+    when the isolated profile is not authenticated).  Retain the launch facts
+    and captured output, but never attempt phase two, semantic projection, or
+    pass publication.
+    """
+
+    if (type(prepared_phase) is not _RegisteredActualPreparedPhase
+            or type(live_phase) is not RegisteredLivePhase
+            or live_phase.capture.exit_code == 0
+            or prepared_phase.execution_id != "execution-1"
+            or prepared_phase.phase_index != 1
+            or prepared_phase.phase != "approval"
+            or live_phase.control_pin is not prepared_phase.control_pin
+            or live_phase.workspace_pin is not prepared_phase.workspace_pin
+            or live_phase.executable_id != "client-executable-1"
+            or live_phase.version_id != "version-1"
+            or live_phase.help_id != "help-1"):
+        raise RunnerError("registered actual phase-one launch failure inputs are invalid")
+    prepared_run = prepared_phase.prepared_run
+    plan = prepared_run.authority.plan
+    metadata = _registered_actual_scenario_fixture_metadata(prepared_run, plan)
+    scenario = metadata.scenario()
+    if (plan.client != "claude" or plan.scenario_id != "web-approval-and-capture"
+            or live_phase.reported_version != plan.registration.expected_version
+            or live_phase.native_format != plan.registration.native_format):
+        raise RunnerError("registered actual phase-one launch failure plan is invalid")
+
+    _verify_registered_phase_roots(
+        writer=prepared_phase.writer, workspace=prepared_phase.workspace,
+        control_pin=prepared_phase.control_pin,
+        workspace_pin=prepared_phase.workspace_pin, trace=prepared_phase.trace,
+    )
+    _verify_registered_actual_phase_control(prepared_phase, scenario=scenario)
+    _verify_phase_prompt(prepared_phase.phase_prompt)
+    verify_control_file(prepared_phase.runner_state)
+    if prepared_phase.mcp_config is None:
+        raise RunnerError("registered actual phase-one launch failure MCP is missing")
+    verify_control_file(prepared_phase.mcp_config)
+    _registered_executable_observation(live_phase.trusted_executable)
+
+    writer = prepared_phase.writer
+    trace_rows = prepared_phase.trace.records()
+    validate_trace_records(trace_rows)
+    transcript_raw = _preserve_transcript(
+        writer.control_root, "transcript-1", live_phase.capture.stdout,
+    )
+    policy_id = writer.add_json("policy-1", "policy", {
+        "run_id": writer.run_id, "execution_id": "execution-1", "phase": "approval",
+        "client": "claude", "profile": "claude-restricted-tool-surface-v1",
+        "network_attestation": "mock-only", "argv": list(live_phase.argv),
+        "argv_sha256": _sha256(_canonical_json(list(live_phase.argv))),
+        "version_id": "version-1", "help_id": "help-1", "fixture_id": metadata.fixture_id,
+        "fixture_sha256": metadata.fixture_sha256, "fixture_capability_id": None,
+        "approval": None, "phase_prompt_id": "phase-prompt-1",
+        "phase_prompt_sha256": prepared_phase.phase_prompt.sha256,
+        "phase_prompt_transport": prepared_phase.phase_prompt.transport,
+        "executable_id": "client-executable-1", "mcp_config_id": "mcp-1",
+        "mcp_config_sha256": prepared_phase.mcp_config.sha256,
+        "mcp_path": str(prepared_phase.mcp_config.path),
+        "mcp_identity": dict(prepared_phase.mcp_config.identity),
+    })
+    transcript_id = writer.add_bytes("transcript-1", "transcript", transcript_raw)
+    writer.add_bytes("stderr-1", "file_capture", live_phase.capture.stderr)
+    trace_value = {
+        "schema_version": 1, "run_id": writer.run_id, "execution_id": "execution-1",
+        "records": trace_rows,
+    }
+    trace_id = writer.add_json("trace-execution-1", "execution_trace", trace_value)
+    process_id = writer.add_json("process-1", "process", {
+        "run_id": writer.run_id, "execution_id": "execution-1", "phase": "approval",
+        "client": "claude", "client_version": live_phase.reported_version,
+        "argv": list(live_phase.argv), "argv_sha256": _sha256(_canonical_json(list(live_phase.argv))),
+        "exit_code": live_phase.capture.exit_code, "transcript_id": transcript_id,
+        "transcript_sha256": _sha256(transcript_raw), "trace_id": trace_id,
+        "trace_sha256": _sha256(_canonical_json(trace_value)),
+        "native_format": live_phase.native_format, "fixture_id": metadata.fixture_id,
+        "fixture_sha256": metadata.fixture_sha256, "fixture_capability_id": None,
+        "approval": None, "phase_prompt_id": "phase-prompt-1",
+        "phase_prompt_sha256": prepared_phase.phase_prompt.sha256,
+        "phase_prompt_transport": prepared_phase.phase_prompt.transport,
+        "executable_id": "client-executable-1",
+        "mcp_identity": dict(prepared_phase.mcp_config.identity),
+    })
+    normalized = normalize_native_transcript(
+        client="claude", version=live_phase.reported_version,
+        transcript=live_phase.capture.stdout,
+    )
+    reasons = ["client_exit_nonzero"]
+    if not normalized.complete:
+        reasons.append(normalized.reason or "unsupported_native_format")
+    log = _incomplete_log(
+        run_id=writer.run_id, scenario=scenario, client="claude",
+        version=live_phase.reported_version, fixture_sha256=metadata.fixture_sha256,
+        executions=[{
+            "id": "execution-1", "phase": "approval", "kind": "actual_client_process",
+            "policy_id": policy_id, "process_id": process_id, "transcript_id": transcript_id,
+        }], reasons=reasons,
+    )
+    path = _finalize_log(writer, log)
+    return RunOutcome(
+        log, path, prepared_run.prepared.workspace, prepared_run.prepared.control_root,
+        trusted_context=None,
+    )
+
+
 def _run_registered_actual_public_web_route(
     authority: "_RegisteredActualAuthority",
 ) -> "RunOutcome":
@@ -20904,6 +21019,10 @@ def _run_registered_actual_public_web_route(
     prepared_run = _prepare_registered_actual_run(authority)
     first_setup = _prepare_registered_actual_phase_one(prepared_run)
     first_live = _launch_actual_registered_live_phase(first_setup)
+    if first_live.capture.exit_code != 0:
+        return _registered_actual_phase_one_launch_failure_outcome(
+            first_setup, first_live,
+        )
     phase_one = _index_registered_actual_public_phase_one(first_setup, first_live)
     authorization = _authorize_registered_actual_public_web_phase_two(prepared_run, phase_one)
     second_setup = _prepare_registered_actual_public_phase_two(authorization)
