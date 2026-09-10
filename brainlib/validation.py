@@ -58,6 +58,7 @@ _REQUIRED_SCHEMAS = (
     PurePosixPath("docs/brain/schemas/source-record.v1.schema.json"),
     PurePosixPath("docs/brain/schemas/page-frontmatter.v1.schema.json"),
     PurePosixPath("docs/brain/schemas/question-frontmatter.v1.schema.json"),
+    PurePosixPath("docs/brain/schemas/question-frontmatter.v2.schema.json"),
 )
 
 _PRISTINE_LEDGER = b"# Source Ledger\n\nNot initialized. Run `./brain init`.\n"
@@ -1050,12 +1051,33 @@ def validate_wiki(
     citation_report = validate_citations(
         paths, ledger, documents, full=full, checksum_cache=checksum_cache
     )
+    interpretation_issues: list[ValidationIssue] = []
+    if citation_report.ok:
+        from .wiki_interpretations import validate_interpretation_document
+        from .wiki_models import parse_question
+
+        for path, text in sorted(documents.items(), key=lambda item: item[0].as_posix()):
+            if path.parent == paths.wiki_questions:
+                try:
+                    record = parse_question(path, text=text)
+                except ValueError:
+                    # Graph validation reports record-model failures with its
+                    # established diagnostic contract.
+                    continue
+                interpretation_issues.extend(
+                    validate_interpretation_document(path, text, record)
+                )
     graph_report = validate_graph(
         paths,
         documents=documents,
         corpus_revision=citation_report.corpus_revision,
     )
-    return merge_reports(citation_report, graph_report)
+    interpretation_report = ValidationReport(
+        ("wiki-interpretations",),
+        tuple(interpretation_issues),
+        citation_report.corpus_revision,
+    )
+    return merge_reports(citation_report, interpretation_report, graph_report)
 
 
 def validate_repository(
@@ -1067,11 +1089,13 @@ def validate_repository(
 ) -> tuple[ValidationReport, ...]:
     """Run final repository validation under one source-then-wiki snapshot."""
 
+    from .validators import validate_instruction_architecture
     from .wiki_transaction import validate_wiki_transaction_state
 
     with SourceWriteLock.acquire(paths.lock):
         with SourceWriteLock.acquire(paths.root / ".brain/wiki-write.lock"):
             layout_report = validate_template_layout(paths)
+            instruction_report = validate_instruction_architecture(paths)
             try:
                 records = ledger.load_all()
             except (OSError, ValueError) as error:
@@ -1088,6 +1112,7 @@ def validate_repository(
                         ),
                         None,
                     ),
+                    instruction_report,
                 )
             cache = (checksum_cache or ChecksumCache()) if full else checksum_cache
             if full:
@@ -1101,12 +1126,18 @@ def validate_repository(
                 paths, corpus_revision=revision
             )
             if not transaction_report.ok:
-                return (layout_report, source_report, transaction_report)
+                return (
+                    layout_report,
+                    source_report,
+                    transaction_report,
+                    instruction_report,
+                )
             return (
                 layout_report,
                 source_report,
                 transaction_report,
                 validate_wiki(paths, ledger, full=full, checksum_cache=cache),
+                instruction_report,
             )
 
 

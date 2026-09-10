@@ -51,7 +51,9 @@ SYNC_REPORT_KEYS = {
 
 def test_help_lists_every_public_command(capsys: pytest.CaptureFixture[str]) -> None:
     assert main(["--help"]) == 0
-    assert "adopt-version" in capsys.readouterr().out
+    output = capsys.readouterr().out
+    assert "adopt-version" in output
+    assert "consume-sync-result" in output
 
 
 def test_help_doctor_import_without_fcntl_and_writes_fail_closed(
@@ -127,6 +129,36 @@ def test_adoption_parser_requires_complete_strict_arguments(tmp_path: Path) -> N
 
     assert stdout.getvalue() == ""
     assert "--candidate-sha256" in stderr.getvalue()
+
+
+@pytest.mark.parametrize(
+    "argv, expected",
+    (
+        (
+            ["--json", "source", "consume-sync-result"],
+            "the following arguments are required: --result-id",
+        ),
+        (
+            [
+                "--json",
+                "source",
+                "consume-sync-result",
+                "--result-id",
+                "sync_not-a-content-address",
+            ],
+                "result_id must be sync_ followed by 64 lower-case hexadecimal characters",
+        ),
+    ),
+)
+def test_consume_sync_result_parser_requires_a_canonical_result_id(
+    tmp_path: Path, argv: list[str], expected: str
+) -> None:
+    stdout, stderr = io.StringIO(), io.StringIO()
+
+    assert main(argv, cwd=tmp_path, stdout=stdout, stderr=stderr) == 2
+
+    assert stdout.getvalue() == ""
+    assert expected in stderr.getvalue()
 
 
 @pytest.mark.parametrize(
@@ -495,7 +527,9 @@ def test_validate_runs_source_ledger_validation(
         "source-ledger",
         "wiki-transaction",
         "citations",
+        "wiki-interpretations",
         "wiki-graph",
+        "instruction-architecture",
     }
     assert result["errors"] == []
     assert stderr.getvalue() == ""

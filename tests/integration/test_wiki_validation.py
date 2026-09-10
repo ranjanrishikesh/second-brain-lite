@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from brainlib.contracts import compute_corpus_revision, compute_sha256
-from brainlib.validation import ChecksumCache, validate_repository
+from brainlib.validation import ChecksumCache, validate_repository, validate_wiki
 from tests.helpers_extractors import run_brain
 from tests.helpers_knowledge import (
     KnowledgeScenario,
@@ -16,6 +16,43 @@ from tests.helpers_knowledge import (
     stage_wiki_write,
     write_wiki_manifest,
 )
+
+
+def test_validate_repository_composes_instruction_architecture_report(
+    scenario_repo: Callable[[str], KnowledgeScenario],
+) -> None:
+    scenario = scenario_repo("citations/current")
+    reports = validate_repository(scenario.paths, scenario.ledger, full=False)
+    instruction_reports = [
+        report
+        for report in reports
+        if report.checks == ("instruction-architecture",)
+    ]
+    assert len(instruction_reports) == 1
+
+
+def test_validate_wiki_reports_unresolved_interpretation_without_two_citations(
+    scenario_repo: Callable[[str], KnowledgeScenario],
+) -> None:
+    """A conflicted v2 record cannot rely on prose instead of exact evidence."""
+
+    scenario = scenario_repo("graph/valid")
+    question = scenario.paths.wiki_questions / "what-is-alpha.md"
+    question.write_text(
+        question.read_text(encoding="utf-8")
+        .replace("answer_status: answered", "answer_status: conflicted")
+        .replace(
+            "interpretation_decision: not_applicable",
+            "interpretation_decision: unresolved",
+        ),
+        encoding="utf-8",
+    )
+
+    report = validate_wiki(scenario.paths, scenario.ledger, full=False)
+
+    assert "interpretation_unresolved_evidence_insufficient" in {
+        issue.code for issue in report.issues
+    }
 
 
 def test_brain_links_check_json_reports_broken_graph_issue(
