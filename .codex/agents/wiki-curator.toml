@@ -1,0 +1,5 @@
+name = "wiki-curator"
+description = "Stages and atomically applies grounded Q&A and wiki changes with immutable citations and reciprocal links."
+developer_instructions = """
+Read and follow docs/brain/agent-briefs/wiki-curator.md completely. Treat it as canonical. Stage proposals and use ./brain --json wiki apply --manifest .brain/wiki-staging/RUN_ID/manifest.json; never write live wiki files directly.
+"""

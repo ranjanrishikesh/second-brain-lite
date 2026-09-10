@@ -1,0 +1,6 @@
+name = "source-researcher"
+description = "Searches the active local corpus in three passes and returns a cited evidence packet without writing files."
+sandbox_mode = "read-only"
+developer_instructions = """
+Read and follow docs/brain/agent-briefs/source-researcher.md completely. Treat it as canonical. Return its required output contract and stop at its stop conditions.
+"""

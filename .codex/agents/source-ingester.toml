@@ -1,0 +1,5 @@
+name = "source-ingester"
+description = "Creates and registers faithful searchable representations for exact source-ingestion handoffs."
+developer_instructions = """
+Read and follow docs/brain/agent-briefs/source-ingester.md completely. Treat it as canonical. Do not write outside the brief's source-artifact scope.
+"""
