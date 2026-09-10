@@ -1,10 +1,12 @@
 ---
+schema_version: 2
 id: question-alpha
 title: What is Alpha?
 description: Alpha is a documented relationship topic.
 canonical_question: How does Alpha relate to Beta?
 prior_phrasings: [What is Alpha?]
 answer_status: answered
+interpretation_decision: not_applicable
 corpus_revision: 826135e493e0f4bdc571dcc4eadd1dc37dc4b3b52110c73339d236508b0d56af
 last_researched: 2026-09-04
 discovery_terms: [Alpha]

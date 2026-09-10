@@ -1968,6 +1968,45 @@ def _preflight_postimage(
             + ", ".join(sorted({issue.code for issue in citations.issues}))
         )
     try:
+        from .wiki_interpretations import (
+            validate_interpretation_document,
+            validate_interpretation_transitions,
+        )
+
+        interpretation_issues = []
+        for path, text in sorted(candidate.items(), key=lambda item: item[0].as_posix()):
+            if path.parent != paths.wiki_questions:
+                continue
+            try:
+                record = parse_question(path, text=text)
+            except ValueError:
+                # Graph validation retains the established record-model diagnostic.
+                continue
+            interpretation_issues.extend(
+                validate_interpretation_document(path, text, record)
+            )
+        if interpretation_issues:
+            raise WikiPreflightError(
+                "Candidate wiki postimage has interpretation validation errors: "
+                + ", ".join(sorted({issue.code for issue in interpretation_issues}))
+            )
+
+        validate_interpretation_transitions(
+            before=before,
+            after=candidate,
+            changed_paths={
+                _target_absolute(paths, change.path) for change in manifest.changes
+            },
+            change_intent=manifest.change_intent,
+            approval_event_id=manifest.approval_event_id,
+        )
+    except WikiPreflightError:
+        raise
+    except ValueError as error:
+        raise WikiPreflightError(
+            f"Candidate wiki postimage has an invalid interpretation transition: {error}"
+        ) from error
+    try:
         index_text = render_wiki_index(paths, candidate)
     except (OSError, UnicodeError, ValueError) as error:
         raise WikiPreflightError(f"Candidate wiki index cannot be rendered: {error}") from error

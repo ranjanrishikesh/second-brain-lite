@@ -173,7 +173,9 @@ def test_pristine_uninitialized_ledger_summary_is_valid(repo_root: Path) -> None
         "source-ledger",
         "wiki-transaction",
         "citations",
+        "wiki-interpretations",
         "wiki-graph",
+        "instruction-architecture",
     }
     assert all(not report["issues"] for report in payload["data"]["reports"])
 

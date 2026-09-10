@@ -13,12 +13,14 @@ def test_parse_question_requires_all_three_search_pass_term_sets(tmp_path: Path)
     record = tmp_path / "topic.md"
     record.write_text(
         f"""---
+schema_version: 2
 id: question-topic
 title: Topic
 description: A single sentence.
 canonical_question: What is Topic?
 prior_phrasings: []
 answer_status: answered
+interpretation_decision: not_applicable
 corpus_revision: {"d" * 64}
 last_researched: 2026-09-04
 discovery_terms: [Topic]
@@ -43,10 +45,91 @@ None.
     assert parsed.corpus_revision == "d" * 64
 
 
+def test_parse_question_v2_exposes_a_typed_not_applicable_decision(
+    tmp_path: Path,
+) -> None:
+    """Removing the v2 decision key or accepting a numeric version must fail."""
+
+    record = tmp_path / "topic.md"
+    record.write_text(
+        _question_text("[Topic]", "[Alpha]", "[]"),
+        encoding="utf-8",
+    )
+
+    parsed = parse_question(record)
+
+    assert parsed.interpretation == wiki_models.InterpretationDecision(
+        "not_applicable", None, None
+    )
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    (
+        lambda text: text.replace("schema_version: 2\n", ""),
+        lambda text: text.replace("schema_version: 2", "schema_version: 1"),
+        lambda text: text.replace(
+            "interpretation_decision: not_applicable\n",
+            "interpretation_decision: not_applicable\n"
+            "interpretation_approval_event_id: approval-1\n",
+        ),
+        lambda text: text.replace(
+            "answer_status: answered\ninterpretation_decision: not_applicable",
+            "answer_status: answered\ninterpretation_decision: unresolved",
+        ),
+        lambda text: text.replace(
+            "interpretation_decision: not_applicable",
+            "interpretation_decision: preferred\n"
+            "interpretation_preference_citation_id: chosen",
+        ),
+    ),
+)
+def test_parse_question_rejects_noncanonical_v2_interpretation_shapes(
+    tmp_path: Path, mutation
+) -> None:
+    """A missing version, partial companions, or invalid state/status is a bug."""
+
+    record = tmp_path / "topic.md"
+    record.write_text(mutation(_question_text("[]", "[]", "[]")), encoding="utf-8")
+
+    with pytest.raises(ValueError):
+        parse_question(record)
+
+
+@pytest.mark.parametrize(
+    "status, decision, companion",
+    (
+        ("unanswered", "not_applicable", ""),
+        ("conflicted", "unresolved", ""),
+        (
+            "partial",
+            "preferred",
+            "interpretation_preference_citation_id: chosen\n"
+            "interpretation_approval_event_id: approval-1\n",
+        ),
+    ),
+)
+def test_parse_question_accepts_each_valid_v2_interpretation_shape(
+    tmp_path: Path, status: str, decision: str, companion: str
+) -> None:
+    record = tmp_path / "topic.md"
+    record.write_text(
+        _question_text("[]", "[]", "[]")
+        .replace("answer_status: answered", f"answer_status: {status}")
+        .replace(
+            "interpretation_decision: not_applicable\n",
+            f"interpretation_decision: {decision}\n{companion}",
+        ),
+        encoding="utf-8",
+    )
+
+    assert parse_question(record).interpretation.decision == decision
+
+
 def test_parse_question_rejects_unknown_status_and_duplicate_sections(tmp_path: Path) -> None:
     record = tmp_path / "topic.md"
     record.write_text(
-        "---\nid: question-topic\ntitle: Topic\ndescription: A single sentence.\ncanonical_question: What?\nprior_phrasings: []\nanswer_status: unknown\ncorpus_revision: "
+        "---\nschema_version: 2\nid: question-topic\ntitle: Topic\ndescription: A single sentence.\ncanonical_question: What?\nprior_phrasings: []\nanswer_status: unknown\ninterpretation_decision: not_applicable\ncorpus_revision: "
         + "d" * 64
         + "\nlast_researched: 2026-09-04\ndiscovery_terms: [Topic]\nexpansion_terms: [Alpha]\nverification_terms: [Check]\n---\n# Topic\n## Current answer\nA.\n## Current answer\nB.\n## Supporting evidence\nNone.\n## Contradictory evidence\nNone.\n## Related pages\n## Sources\n",
         encoding="utf-8",
@@ -418,12 +501,14 @@ def test_parse_question_validates_later_heading_spans_before_section_boundaries(
 
 def _question_text(discovery: str, expansion: str, verification: str) -> str:
     return f"""---
+schema_version: 2
 id: question-topic
 title: Topic
 description: A single sentence.
 canonical_question: What is Topic?
 prior_phrasings: []
 answer_status: answered
+interpretation_decision: not_applicable
 corpus_revision: {"d" * 64}
 last_researched: 2026-09-04
 discovery_terms: {discovery}
@@ -447,12 +532,14 @@ def _question_document(body: tuple[str, ...], newline: str) -> str:
     return newline.join(
         (
             "---",
+            "schema_version: 2",
             "id: question-alpha",
             "title: What is Alpha?",
             "description: A single sentence.",
             "canonical_question: What is Alpha?",
             "prior_phrasings: []",
             "answer_status: answered",
+            "interpretation_decision: not_applicable",
             f"corpus_revision: {'d' * 64}",
             "last_researched: 2026-09-04",
             "discovery_terms: [Alpha]",

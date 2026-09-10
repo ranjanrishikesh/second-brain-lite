@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "question-frontmatter.v2.schema.json",
+  "title": "Second Brain Lite question frontmatter v2",
+  "oneOf": [
+    {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        {
+          "not": { "anyOf": [
+            { "required": ["interpretation_preference_citation_id"] },
+            { "required": ["interpretation_approval_event_id"] }
+          ] },
+          "properties": {
+            "interpretation_decision": { "const": "not_applicable" },
+            "answer_status": { "enum": ["answered", "partial", "unanswered"] }
+          }
+        }
+      ]
+    },
+    {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        {
+          "not": { "anyOf": [
+            { "required": ["interpretation_preference_citation_id"] },
+            { "required": ["interpretation_approval_event_id"] }
+          ] },
+          "properties": {
+            "interpretation_decision": { "const": "unresolved" },
+            "answer_status": { "const": "conflicted" }
+          }
+        }
+      ]
+    },
+    {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        {
+          "required": ["interpretation_preference_citation_id", "interpretation_approval_event_id"],
+          "properties": {
+            "interpretation_decision": { "const": "preferred" },
+            "answer_status": { "enum": ["answered", "partial"] },
+            "interpretation_preference_citation_id": { "$ref": "#/$defs/nonempty" },
+            "interpretation_approval_event_id": { "$ref": "#/$defs/nonempty" }
+          }
+        }
+      ]
+    }
+  ],
+  "$defs": {
+    "nonempty": { "type": "string", "minLength": 1, "pattern": ".*\\S.*" },
+    "string_list": { "type": "array", "items": { "$ref": "#/$defs/nonempty" } },
+    "base": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "id", "title", "description", "canonical_question", "prior_phrasings", "answer_status", "corpus_revision", "last_researched", "discovery_terms", "expansion_terms", "verification_terms", "interpretation_decision"],
+      "properties": {
+        "schema_version": { "const": "2" },
+        "id": { "type": "string", "pattern": "^question-[a-z0-9]+(?:-[a-z0-9]+)*$" },
+        "title": { "$ref": "#/$defs/nonempty" },
+        "description": { "$ref": "#/$defs/nonempty" },
+        "canonical_question": { "$ref": "#/$defs/nonempty" },
+        "prior_phrasings": { "$ref": "#/$defs/string_list" },
+        "answer_status": { "enum": ["answered", "partial", "unanswered", "conflicted"] },
+        "corpus_revision": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "last_researched": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+        "discovery_terms": { "$ref": "#/$defs/string_list" },
+        "expansion_terms": { "$ref": "#/$defs/string_list" },
+        "verification_terms": { "$ref": "#/$defs/string_list" },
+        "interpretation_decision": { "enum": ["not_applicable", "unresolved", "preferred"] },
+        "interpretation_preference_citation_id": { "$ref": "#/$defs/nonempty" },
+        "interpretation_approval_event_id": { "$ref": "#/$defs/nonempty" }
+      }
+    }
+  }
+}

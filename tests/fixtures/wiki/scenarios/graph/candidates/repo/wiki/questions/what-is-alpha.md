@@ -1,10 +1,12 @@
 ---
+schema_version: 2
 id: question-what-is-alpha
 title: What is Alpha?
 description: What is Alpha is a documented question.
 canonical_question: What is Alpha?
 prior_phrasings: [Alpha question]
 answer_status: answered
+interpretation_decision: not_applicable
 corpus_revision: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 last_researched: 2026-09-04
 discovery_terms: [Alpha]

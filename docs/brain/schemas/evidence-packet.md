@@ -34,14 +34,15 @@ proposed Markdown edits.
 
 The milestone-5 `brain-answer` skill MUST begin every substantive answer
 workflow with `./brain --json sync`; source sync MUST precede substantive
-research. It parses the bounded envelope's `result_manifest`,
-verifies that content-addressed JSONL before reading an event, drains the
-stream, and requires its exact counts and corpus revision to agree with the
-envelope. It durably applies/deduplicates that `result_id` before issuing
-`./brain --json source acknowledge-sync-result --result-id "$result_id"`.
-An incomplete, failed, expired, stale, spool-limited, or tampered stream is a
-blocking coverage gap and is never acknowledged; bounded display samples never
-prove completeness.
+research. It retains the bounded envelope's result ID, revision, and counts,
+then runs `./brain --json source consume-sync-result --result-id "$result_id"`.
+Its returned result ID, immutable `manifest_path`, corpus revision, exact event
+counts, and effect digest must agree with that envelope. The CLI verifies and
+drains the stream and records a durable receipt without acknowledgement or
+mutation; the workflow reads the path only for exact events, applies/deduplicates
+that `result_id`, and then separately acknowledges it. An incomplete, failed,
+expired, stale, spool-limited, or tampered result is a blocking coverage gap and
+is never acknowledged; bounded display samples never prove completeness.
 
 After every acknowledged sync, the workflow passes the exact sorted
 `citation_rewrite` event tuple—including an empty tuple—through an
@@ -69,17 +70,21 @@ current revision; a freshness probe is sync evidence, never a fourth pass.
 Only the resulting complete `EvidencePacket` is handed to the curator.
 
 For incomplete local evidence, the workflow writes a `partial` or `unanswered`
-record and requests web approval; it does not browse. After approval, each
-successful `source snapshot-url` response is consumed as its canonical
-`data.snapshot`: `source_id`, `raw_path`, `content_sha256`, `source_version`,
-`retrieval`, `extraction_result`, `active_representation`, and
-`corpus_revision`. For agent work it also consumes the sibling
-repo-relative-or-null `handoff_manifest` and sorted `handoffs` summaries before
-registering extraction. It persists only sources actually used, does not
-invent a post-web `SyncReport`, and cannot rely on a later sanity sync to
-rediscover already-active captures. Once every used capture has a non-null
-active representation (or a registered agent extraction), it uses those exact
-new representations and the latest returned revision to restart and completely
-drain discovery, expansion, and verification before a durable answer is
-created. This contract fixture documents control flow only and never calls the
-network.
+record and requests web approval; it does not browse. After approval, retain
+each successful `source snapshot-url` result manifest and run
+`./brain --json source consume-sync-result --result-id "$result_id"`. Require
+the receipt's result ID, immutable `manifest_path`, revision, exact event
+counts, effect digest, and `handoff_delivery` to match that result. Read its
+canonical `data.snapshot`: `source_id`, `raw_path`, `content_sha256`,
+`source_version`, `retrieval`, `extraction_result`, `active_representation`,
+and `corpus_revision`. For agent work, only a non-null receipt-bound immutable
+`handoff_delivery` may authorize action: verify and map typed delivery items to exact manifest effects, then apply/deduplicate those effects durably by result
+ID. Run `./brain --json source acknowledge-sync-result --result-id "$result_id"`
+separately; only then dispatch or register a typed item. It
+persists only sources actually used, does not invent a post-web `SyncReport`,
+and cannot rely on a later sanity sync to rediscover already-active captures.
+Once every used capture has a non-null active representation (or a registered
+agent extraction), it uses those exact new representations and the latest
+returned revision to restart and completely drain discovery, expansion, and
+verification before a durable answer is created. This contract fixture
+documents control flow only and never calls the network.

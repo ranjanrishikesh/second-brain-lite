@@ -21,3 +21,11 @@ Every factual claim MUST use adjacent citation markers whose definitions use
 the citation-definition grammar and appear in the final Sources section.
 Declared page/question relationships MUST be reciprocal. Ambiguous links are
 reported, never auto-resolved.
+
+Canonical records use frontmatter v2. `not_applicable` has no companion fields
+and may be answered, partial, or unanswered. `unresolved` is conflicted, has
+no companion fields, and requires two distinct exact citations in `##
+Contradictory evidence`. `preferred` is answered or partial, contains a local
+selected citation ID and approval event ID, and cites that choice in both
+Contradictory evidence and Current answer. Prose never proves or clears this
+typed state; v1 is historical only.

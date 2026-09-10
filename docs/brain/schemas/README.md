@@ -3,7 +3,9 @@
 These files are the versioned JSON contracts for source-ledger records and
 wiki Markdown frontmatter. A filename's `v1` suffix is part of the contract;
 incompatible changes require a new version rather than silently widening the
-existing schema.
+existing schema. `question-frontmatter.v2.schema.json` is the canonical
+QuestionRecord contract. It adds an intentionally typed contradictory-
+interpretation decision; v1 remains historical documentation only.
 
 `source-record.v1.schema.json` describes the canonical JSON form emitted by
 `SourceRecord.to_dict()`. Raw paths are POSIX paths relative to `sources/raw`,

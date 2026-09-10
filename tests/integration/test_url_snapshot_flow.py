@@ -44,6 +44,18 @@ def run_brain_json(repo_root, *argv, **kwargs):
     return _run_brain_json(repo_root, *argv, **kwargs)
 
 
+def consume_sync_result(repo_root, result_id):
+    payload = run_brain_json(
+        repo_root,
+        "source",
+        "consume-sync-result",
+        "--result-id",
+        result_id,
+    )
+    assert payload["ok"], payload
+    return payload
+
+
 def snapshot_args(source_id=None):
     target = (
         ("--url", "https://example.test/report", "--description", "fixture")
@@ -425,6 +437,7 @@ def test_snapshot_activation_journal_orders_prepare_proofs_and_commit(
             },
         )
     ]
+    consume_sync_result(repo_root, reference.result_id)
     acknowledged = run_brain_json(
         repo_root,
         "source",
@@ -460,6 +473,43 @@ def test_snapshot_pending_event_result_replays_without_capture(
     assert replay == first
     factory.assert_not_called()
     assert LedgerStore(repo_paths).load_all() == records
+
+
+def test_snapshot_acknowledgement_requires_consumption_and_keeps_continuation(
+    descriptor_record, repo_root, repo_paths
+):
+    from brainlib.sync_results import SyncResultStore
+
+    payload = run_brain_json(
+        repo_root,
+        *snapshot_args(descriptor_record.source_id),
+        services=web_test_services(lambda: mock_web_transport(repo_paths)),
+    )
+    result_id = payload["data"]["result_manifest"]["result_id"]
+    store = SyncResultStore(repo_paths)
+
+    early = run_brain_json(
+        repo_root,
+        "source",
+        "acknowledge-sync-result",
+        "--result-id",
+        result_id,
+    )
+    assert not early["ok"]
+    assert store.load_pending() is not None
+    assert store.load_snapshot_continuation() is not None
+
+    consume_sync_result(repo_root, result_id)
+    acknowledged = run_brain_json(
+        repo_root,
+        "source",
+        "acknowledge-sync-result",
+        "--result-id",
+        result_id,
+    )
+    assert acknowledged["ok"], acknowledged
+    assert store.load_pending() is None
+    assert store.load_snapshot_continuation() is None
 
 
 @pytest.mark.parametrize(
@@ -871,6 +921,7 @@ def test_snapshot_acknowledgement_fault_is_retryable(
     )
     assert payload["ok"], payload
     identifier = payload["data"]["result_manifest"]["result_id"]
+    consume_sync_result(repo_root, identifier)
     original = getattr(SyncResultStore, method)
 
     def fail(store, reference):
@@ -1061,6 +1112,9 @@ def test_unstaged_snapshot_defers_other_source_writes_until_recovered_and_acked(
         ),
     )
     assert replay["ok"], replay
+    consume_sync_result(
+        repo_paths.root, replay["data"]["result_manifest"]["result_id"]
+    )
     acknowledged = run_brain_json(
         repo_paths.root,
         "source",
@@ -1170,6 +1224,7 @@ def test_large_snapshot_history_replays_acknowledges_and_allows_later_capture(
     assert replay == first
     assert LedgerStore(repo_paths).load_all() == before
     factory.assert_not_called()
+    consume_sync_result(repo_root, first["data"]["result_manifest"]["result_id"])
     acknowledged = run_brain_json(
         repo_root,
         "source",
@@ -1240,6 +1295,7 @@ def test_compact_snapshot_receipts_do_not_grow_with_retained_history(
             services=web_test_services(lambda: mock_web_transport(repo_paths)),
         )
         assert payload["ok"], payload
+        consume_sync_result(repo_root, payload["data"]["result_manifest"]["result_id"])
         acknowledged = run_brain_json(
             repo_root,
             "source",
@@ -1572,6 +1628,9 @@ def test_large_snapshot_reactivation_hard_failures_preserve_compact_recovery(
     assert LedgerStore(repo_paths).load_all() == before
     events = list(result_store.iter_events(result_store.load_pending().reference))
     assert [event.kind for event in events] == ["new_active_representation"]
+    consume_sync_result(
+        repo_root, replay["data"]["result_manifest"]["result_id"]
+    )
     acknowledged = run_brain_json(
         repo_root,
         "source",
@@ -1646,9 +1705,140 @@ def test_sync_reconstructs_rendered_handoff_without_network(
     payload = run_brain_json(repo_root, "sync", services=web_test_services(factory))
     assert payload["data"]["handoffs"][0]["kind"] == "rendered_web_capture"
     assert payload["data"]["handoffs"][0]["handoff_id"] == render_handoff_id(record)
+    reference = payload["data"]["result_manifest"]
+    consumed = consume_sync_result(repo_root, reference["result_id"])
+    delivery = consumed["data"]["handoff_delivery"]
+    assert delivery is not None
+    assert delivery["result_id"] == reference["result_id"]
+    assert delivery["item_count"] == 1
+    delivery_path = repo_root / delivery["path"]
+    delivered = json.loads(delivery_path.read_text(encoding="utf-8"))
+    assert delivered["reference"] == reference
+    assert delivered["items"][0]["kind"] == "rendered_web_capture"
+    assert delivered["items"][0]["handoff_id"] == render_handoff_id(record)
+    acknowledged = run_brain_json(
+        repo_root, "source", "acknowledge-sync-result", "--result-id", reference["result_id"]
+    )
+    assert acknowledged["ok"], acknowledged
     retained = LedgerStore(repo_paths).load(record.source_id)
     assert retained.versions[record.active_content_sha256].raw_path.parts[0] == "_web"
     factory.assert_not_called()
+
+
+def test_snapshot_manifest_binds_rendered_handoff_delivery(
+    descriptor_record, repo_paths, repo_root
+):
+    """A deferred snapshot handoff is a manifest effect, not a response summary."""
+
+    transport = mock_web_transport(
+        repo_paths, ROUTES["/render-shell"][2], "text/html", "shell.html"
+    )
+    payload = run_brain_json(
+        repo_root,
+        *snapshot_args(descriptor_record.source_id),
+        services=web_test_services(lambda: transport),
+    )
+    assert payload["ok"], payload
+    reference = payload["data"]["result_manifest"]
+    assert reference["event_counts"]["handoff_source_id"] == 1
+
+    consumed = consume_sync_result(repo_root, reference["result_id"])
+    delivery = consumed["data"]["handoff_delivery"]
+    assert delivery is not None
+    delivered = json.loads((repo_root / delivery["path"]).read_text(encoding="utf-8"))
+    assert delivered["reference"] == reference
+    assert [item["kind"] for item in delivered["items"]] == [
+        "rendered_web_capture"
+    ]
+    acknowledged = run_brain_json(
+        repo_root,
+        "source",
+        "acknowledge-sync-result",
+        "--result-id",
+        reference["result_id"],
+    )
+    assert acknowledged["ok"], acknowledged
+
+
+def test_acknowledgement_replay_validates_delivery_after_registration(
+    repo_root,
+):
+    """Registration changes the source, but cannot invalidate an ack replay."""
+
+    from tests.helpers_extractors import PNG_BYTES
+
+    (repo_root / "sources/raw/diagram.png").write_bytes(PNG_BYTES)
+    payload = run_brain_json(repo_root, "sync")
+    reference = payload["data"]["result_manifest"]
+    handoff = payload["data"]["handoffs"][0]
+    staging_markdown = (
+        repo_root / ".brain/agent-staging" / handoff["handoff_id"] / "result.md"
+    )
+    staging_markdown.parent.mkdir(parents=True)
+    staging_markdown.write_text(
+        '<a id="block:image-1"></a>\n## Image 1\nDiagram text\n', encoding="utf-8"
+    )
+    consumed = consume_sync_result(repo_root, reference["result_id"])
+    assert consumed["data"]["handoff_delivery"] is not None
+    first_ack = run_brain_json(
+        repo_root,
+        "source",
+        "acknowledge-sync-result",
+        "--result-id",
+        reference["result_id"],
+    )
+    assert first_ack["ok"], first_ack
+
+    registered = run_brain_json(
+        repo_root,
+        "source",
+        "register-extraction",
+        "--handoff-id",
+        handoff["handoff_id"],
+        "--staging-path",
+        str(staging_markdown),
+        "--anchors-json",
+        '[{"kind":"block","value":"image-1"}]',
+        "--quality-state",
+        "ok",
+        "--note",
+        "registered for replay test",
+    )
+    assert registered["ok"], registered
+    replay = run_brain_json(
+        repo_root,
+        "source",
+        "acknowledge-sync-result",
+        "--result-id",
+        reference["result_id"],
+    )
+    assert replay["ok"], replay
+    assert replay["data"]["status"] == "already_acknowledged"
+
+
+def test_tampered_handoff_delivery_blocks_acknowledgement(repo_root, repo_paths):
+    """A receipt cannot repair or acknowledge a swapped delivery artifact."""
+
+    from brainlib.sync_results import SyncResultStore
+    from tests.helpers_extractors import PNG_BYTES
+
+    (repo_root / "sources/raw/diagram.png").write_bytes(PNG_BYTES)
+    payload = run_brain_json(repo_root, "sync")
+    reference = payload["data"]["result_manifest"]
+    consumed = consume_sync_result(repo_root, reference["result_id"])
+    delivery = consumed["data"]["handoff_delivery"]
+    assert delivery is not None
+    (repo_root / delivery["path"]).write_text("{}", encoding="utf-8")
+
+    acknowledged = run_brain_json(
+        repo_root,
+        "source",
+        "acknowledge-sync-result",
+        "--result-id",
+        reference["result_id"],
+    )
+    assert not acknowledged["ok"]
+    assert SyncResultStore(repo_paths).load_pending() is not None
 
 
 def test_captured_web_evidence_passes_full_ledger_validation(repo_root, repo_paths):
@@ -1722,6 +1912,7 @@ def test_url_edit_without_active_capture_restores_control_metadata(
     payload = run_brain_json(
         repo_root, *snapshot_args(), services=web_test_services(lambda: transport)
     )
+    consume_sync_result(repo_root, payload["data"]["result_manifest"]["result_id"])
     acknowledged = run_brain_json(
         repo_root,
         "source",

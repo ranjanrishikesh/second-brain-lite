@@ -306,12 +306,14 @@ updated: 2026-09-04
 def _question(question_id: str, title: str, description: str, current: str, support: str, contradiction: str, related: str, *, canonical: str | None = None, prior: str = "[]", revision: str = "a" * 64, discovery: str = "[Alpha]", expansion: str = "[Alpha topic]", verification: str = "[Alpha check]") -> str:
     related_break = "\n\n" if related else "\n"
     return f"""---
+schema_version: 2
 id: {question_id}
 title: {title}
 description: {description}
 canonical_question: {canonical or title}
 prior_phrasings: {prior}
 answer_status: answered
+interpretation_decision: not_applicable
 corpus_revision: {revision}
 last_researched: 2026-09-04
 discovery_terms: {discovery}

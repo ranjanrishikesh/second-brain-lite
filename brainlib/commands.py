@@ -471,6 +471,49 @@ def acknowledge_sync_result(cwd: Path, result: CommandResult) -> None:
         raise ValueError(acknowledgement.errors[0].message)
 
 
+def consume_sync_result_id(cwd: Path, result_id: str) -> CommandResult:
+    """Durably consume the exact current sync result without acknowledging it."""
+
+    command_name = "source consume-sync-result"
+    try:
+        paths = RepoPaths.discover(cwd)
+        result_store = SyncResultStore(paths)
+
+        def operation():
+            return result_store.consume_pending(result_id)
+
+        consumed = _run_with_source_lock(paths, operation)
+        return CommandResult(
+            command_name,
+            ok=True,
+            data={
+                "result_id": consumed.reference.result_id,
+                "status": consumed.status,
+                "manifest_path": consumed.manifest_path.as_posix(),
+                "corpus_revision": consumed.reference.corpus_revision,
+                "event_counts": dict(sorted(consumed.event_counts.items())),
+                "effect_digest": consumed.effect_digest,
+                "handoff_delivery": None
+                if consumed.handoff_delivery is None
+                else consumed.handoff_delivery.to_dict(),
+            },
+        )
+    except KeyboardInterrupt:
+        raise
+    except Exception as error:
+        return CommandResult(
+            command_name,
+            ok=False,
+            data={"result_id": result_id},
+            errors=(
+                Diagnostic(
+                    "sync_result_consumption_failed",
+                    safe_exception_text(error),
+                ),
+            ),
+        )
+
+
 def acknowledge_sync_result_id(cwd: Path, result_id: str) -> CommandResult:
     command_name = "source acknowledge-sync-result"
     try:
@@ -481,6 +524,7 @@ def acknowledge_sync_result_id(cwd: Path, result_id: str) -> CommandResult:
             pending = result_store.load_pending()
             acknowledged = result_store.load_acknowledged()
             if pending is not None and pending.reference.result_id == result_id:
+                result_store.require_consumption_receipt(pending.reference)
                 if result_store.load_staged() is not None:
                     records = LedgerStore(paths).load_all()
                     result_store.complete_inflight(
@@ -495,6 +539,13 @@ def acknowledge_sync_result_id(cwd: Path, result_id: str) -> CommandResult:
                 acknowledged is not None
                 and acknowledged.reference.result_id == result_id
             ):
+                # A client may have registered the delivered handoff after the
+                # first acknowledgement. Replay still validates the immutable
+                # receipt and delivery, but must not require the old source
+                # record to remain current.
+                result_store.require_consumption_receipt(
+                    acknowledged.reference, validate_current_sources=False
+                )
                 if result_store.load_staged() is not None:
                     records = LedgerStore(paths).load_all()
                     result_store.complete_inflight(
@@ -1353,7 +1404,8 @@ def snapshot_source_url(
                 def emit(kind, data):
                     nonlocal prepared_event
                     result_writer.emit(kind, data)
-                    prepared_event = SyncEvent(kind, data)
+                    if kind == "new_active_representation":
+                        prepared_event = SyncEvent(kind, data)
 
                 def prepare(planned, candidate):
                     nonlocal continuation
@@ -1367,6 +1419,14 @@ def snapshot_source_url(
                             now=timestamp,
                         )
                     )
+                    if data["handoffs"]:
+                        result_writer.emit(
+                            "handoff_source_id",
+                            {
+                                "source_id": candidate.source_id,
+                                "record_sha256": _ledger_record_sha256(candidate),
+                            },
+                        )
                     before, after = result_writer.snapshot_journal_digests(
                         prepared_event
                     )

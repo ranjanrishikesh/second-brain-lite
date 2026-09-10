@@ -211,6 +211,15 @@ def initialized_repo(repo_root: Path, fixture_services) -> Path:
     initialized = run_brain_json(repo_root, "init", services=fixture_services)
     assert initialized["ok"], initialized
     reference = initialized["data"]["result_manifest"]
+    consumed = run_brain_json(
+        repo_root,
+        "source",
+        "consume-sync-result",
+        "--result-id",
+        reference["result_id"],
+        services=fixture_services,
+    )
+    assert consumed["ok"], consumed
     acknowledgement = run_brain_json(
         repo_root,
         "source",

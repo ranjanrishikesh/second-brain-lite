@@ -13,6 +13,7 @@ from .markdown import MarkdownScan, scan_markdown
 
 
 AnswerStatus = Literal["answered", "partial", "unanswered", "conflicted"]
+InterpretationDecisionValue = Literal["not_applicable", "unresolved", "preferred"]
 
 _ID = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 _QUESTION_ID = re.compile(r"^question-[a-z0-9]+(?:-[a-z0-9]+)*$")
@@ -25,6 +26,15 @@ class SearchTerms:
     discovery: tuple[str, ...]
     expansion: tuple[str, ...]
     verification: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class InterpretationDecision:
+    """The canonical, typed disposition of contradictory question evidence."""
+
+    decision: InterpretationDecisionValue
+    preference_citation_id: str | None
+    approval_event_id: str | None
 
 
 @dataclass(frozen=True)
@@ -60,6 +70,7 @@ class QuestionRecord:
     corpus_revision: str
     last_researched: date
     search_terms: SearchTerms
+    interpretation: InterpretationDecision
     related_pages: tuple[RelatedTarget, ...]
     body: str
 
@@ -156,23 +167,36 @@ def _parse_question(
 ) -> QuestionRecord:
 
     document = parse_frontmatter(path, text=text)
-    _exact_frontmatter(
-        document,
-        {
-            "id",
-            "title",
-            "description",
-            "canonical_question",
-            "prior_phrasings",
-            "answer_status",
-            "corpus_revision",
-            "last_researched",
-            "discovery_terms",
-            "expansion_terms",
-            "verification_terms",
-        },
-        path,
-    )
+    base_fields = {
+        "schema_version",
+        "id",
+        "title",
+        "description",
+        "canonical_question",
+        "prior_phrasings",
+        "answer_status",
+        "corpus_revision",
+        "last_researched",
+        "discovery_terms",
+        "expansion_terms",
+        "verification_terms",
+        "interpretation_decision",
+    }
+    if document.data.get("schema_version") != "2":
+        raise ValueError(f"{path}: schema_version must be exact scalar string 2")
+    decision_value = document.data.get("interpretation_decision")
+    if decision_value == "preferred":
+        _exact_frontmatter(
+            document,
+            base_fields
+            | {
+                "interpretation_preference_citation_id",
+                "interpretation_approval_event_id",
+            },
+            path,
+        )
+    else:
+        _exact_frontmatter(document, base_fields, path)
     question_id = _scalar(document.data["id"], "id", path)
     if not _QUESTION_ID.fullmatch(question_id):
         raise ValueError(f"{path}: id must be a question identifier")
@@ -185,6 +209,32 @@ def _parse_question(
     status = _scalar(document.data["answer_status"], "answer_status", path)
     if status not in {"answered", "partial", "unanswered", "conflicted"}:
         raise ValueError(f"{path}: unknown answer_status: {status}")
+    decision = _scalar(
+        document.data["interpretation_decision"], "interpretation_decision", path
+    )
+    if decision not in {"not_applicable", "unresolved", "preferred"}:
+        raise ValueError(f"{path}: unknown interpretation_decision: {decision}")
+    preference_citation_id = None
+    approval_event_id = None
+    if decision == "not_applicable":
+        if status not in {"answered", "partial", "unanswered"}:
+            raise ValueError(f"{path}: not_applicable cannot have conflicted answer_status")
+    elif decision == "unresolved":
+        if status != "conflicted":
+            raise ValueError(f"{path}: unresolved requires conflicted answer_status")
+    else:
+        if status not in {"answered", "partial"}:
+            raise ValueError(f"{path}: preferred requires answered or partial answer_status")
+        preference_citation_id = _scalar(
+            document.data["interpretation_preference_citation_id"],
+            "interpretation_preference_citation_id",
+            path,
+        )
+        approval_event_id = _scalar(
+            document.data["interpretation_approval_event_id"],
+            "interpretation_approval_event_id",
+            path,
+        )
     revision = _scalar(document.data["corpus_revision"], "corpus_revision", path)
     if not _REVISION.fullmatch(revision):
         raise ValueError(f"{path}: corpus_revision must be 64 lowercase hexadecimal characters")
@@ -221,6 +271,11 @@ def _parse_question(
         revision,
         _date(document.data["last_researched"], "last_researched", path),
         terms,
+        InterpretationDecision(
+            cast(InterpretationDecisionValue, decision),
+            preference_citation_id,
+            approval_event_id,
+        ),
         _relations(_section_text(document.body, sections, "Related pages"), path, "Related pages"),
         document.body,
     )

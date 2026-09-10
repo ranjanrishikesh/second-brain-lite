@@ -323,6 +323,15 @@ def snapshot_cli(repo_root, url, *, event_id, acknowledge_result=False):
     )
     assert payload["ok"], payload
     if acknowledge_result:
+        consumed = run_brain_json(
+            repo_root,
+            "source",
+            "consume-sync-result",
+            "--result-id",
+            payload["data"]["result_manifest"]["result_id"],
+            services=web_test_services(),
+        )
+        assert consumed["ok"], consumed
         acknowledgement = run_brain_json(
             repo_root,
             "source",

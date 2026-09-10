@@ -14,18 +14,21 @@ from datetime import datetime
 from pathlib import PurePosixPath
 from types import MappingProxyType
 
-from .contracts import SourceRecord
+from .contracts import SourceRecord, compute_corpus_revision
 from .diagnostics import JSONValue
 from .layout import RepoPaths
 from .ledger import (
+    LedgerStore,
     PublishedWriteError,
     UnsafeFilesystemError,
     _PinnedDirectory,
+    _atomic_write_at,
     _fsync_directory,
     _read_regular_at,
     _same_file_observation,
     _canonical_record_payload,
 )
+from .registry import ExtractorRegistry
 
 
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
@@ -120,18 +123,118 @@ class SyncResultReference:
         }:
             raise ValueError("sync result reference has invalid fields")
         counts = value["event_counts"]
-        if not isinstance(counts, dict):
-            raise ValueError("sync result event_counts must be an object")
+        raw_path = value["path"]
+        if (
+            type(value["result_id"]) is not str
+            or type(raw_path) is not str
+            or type(value["sha256"]) is not str
+            or type(value["corpus_revision"]) is not str
+            or not isinstance(counts, dict)
+            or PurePosixPath(raw_path).as_posix() != raw_path
+        ):
+            raise ValueError("sync result reference has invalid field types or path")
         return cls(
-            value["result_id"] if isinstance(value["result_id"], str) else "",
-            PurePosixPath(value["path"] if isinstance(value["path"], str) else ""),
-            value["sha256"] if isinstance(value["sha256"], str) else "",
-            (
-                value["corpus_revision"]
-                if isinstance(value["corpus_revision"], str)
-                else ""
-            ),
+            value["result_id"],
+            PurePosixPath(raw_path),
+            value["sha256"],
+            value["corpus_revision"],
             counts,
+        )
+
+
+@dataclass(frozen=True)
+class SyncResultConsumption:
+    """A durable proof that a pending result's complete event stream was consumed."""
+
+    status: str
+    reference: SyncResultReference
+    event_counts: Mapping[str, int]
+    effect_digest: str
+    handoff_delivery: HandoffDeliveryReference | None = None
+
+    def __post_init__(self) -> None:
+        if self.status not in {"consumed", "already_consumed"}:
+            raise ValueError("sync result consumption status is invalid")
+        counts = dict(self.event_counts)
+        if (
+            set(counts) != _EVENT_KINDS
+            or any(type(value) is not int or value < 0 for value in counts.values())
+            or counts != dict(self.reference.event_counts)
+        ):
+            raise ValueError("consumption counts do not match the result reference")
+        if _SHA256_RE.fullmatch(self.effect_digest) is None:
+            raise ValueError("consumption effect digest must be canonical")
+        if self.handoff_delivery is not None:
+            if not isinstance(self.handoff_delivery, HandoffDeliveryReference):
+                raise ValueError("consumption handoff delivery is invalid")
+            if self.handoff_delivery.result_id != self.reference.result_id:
+                raise ValueError("consumption handoff delivery has wrong result ID")
+        object.__setattr__(self, "event_counts", MappingProxyType(counts))
+
+    @property
+    def manifest_path(self) -> PurePosixPath:
+        return self.reference.path
+
+    def receipt_payload(self) -> dict[str, JSONValue]:
+        return {
+            "schema_version": 2,
+            "result_id": self.reference.result_id,
+            "reference": self.reference.to_dict(),
+            "event_counts": dict(sorted(self.event_counts.items())),
+            "effect_digest": self.effect_digest,
+            "handoff_delivery": None
+            if self.handoff_delivery is None
+            else self.handoff_delivery.to_dict(),
+        }
+
+
+@dataclass(frozen=True)
+class HandoffDeliveryReference:
+    """Immutable typed-handoff artifact bound to one consumed result."""
+
+    result_id: str
+    path: PurePosixPath
+    sha256: str
+    item_count: int
+
+    def __post_init__(self) -> None:
+        if _RESULT_ID_RE.fullmatch(self.result_id) is None:
+            raise ValueError("handoff delivery result ID is invalid")
+        expected = PurePosixPath(
+            ".brain", "sync-results", f"handoff-delivery_{self.result_id}.json"
+        )
+        if self.path != expected:
+            raise ValueError("handoff delivery path must be canonical")
+        if _SHA256_RE.fullmatch(self.sha256) is None:
+            raise ValueError("handoff delivery digest is invalid")
+        if type(self.item_count) is not int or self.item_count <= 0:
+            raise ValueError("handoff delivery item count is invalid")
+
+    def to_dict(self) -> dict[str, JSONValue]:
+        return {
+            "result_id": self.result_id,
+            "path": self.path.as_posix(),
+            "sha256": self.sha256,
+            "item_count": self.item_count,
+        }
+
+    @classmethod
+    def from_dict(cls, value: object) -> HandoffDeliveryReference:
+        if (
+            type(value) is not dict
+            or set(value) != {"result_id", "path", "sha256", "item_count"}
+            or type(value["result_id"]) is not str
+            or type(value["path"]) is not str
+            or type(value["sha256"]) is not str
+            or type(value["item_count"]) is not int
+            or PurePosixPath(value["path"]).as_posix() != value["path"]
+        ):
+            raise ValueError("handoff delivery reference has invalid fields")
+        return cls(
+            value["result_id"],
+            PurePosixPath(value["path"]),
+            value["sha256"],
+            value["item_count"],
         )
 
 
@@ -1430,6 +1533,25 @@ class SyncResultStore:
                 )
             ]
         )
+        handoffs = continuation.result_recipe.get("handoffs")
+        if type(handoffs) is not list:
+            raise ValueError("snapshot continuation handoffs are invalid")
+        if handoffs:
+            if any(
+                type(summary) is not dict
+                or summary.get("source_id") != continuation.source_id
+                for summary in handoffs
+            ):
+                raise ValueError("snapshot continuation handoffs do not match its source")
+            expected.append(
+                SyncEvent(
+                    "handoff_source_id",
+                    {
+                        "source_id": continuation.source_id,
+                        "record_sha256": continuation.candidate_sha256,
+                    },
+                )
+            )
         counts = {
             kind: sum(event.kind == kind for event in expected) for kind in _EVENT_KINDS
         }
@@ -1592,6 +1714,323 @@ class SyncResultStore:
                     os.close(descriptor)
 
         return iterator()
+
+    def consume_pending(self, result_id: str) -> SyncResultConsumption:
+        """Verify and durably record consumption of exactly the current pending result."""
+
+        if _RESULT_ID_RE.fullmatch(result_id) is None:
+            raise ValueError("sync result_id must be content-addressed")
+        pending = self.load_pending()
+        if pending is None or pending.reference.result_id != result_id:
+            raise ValueError("result_id does not name the current pending sync result")
+        reference = pending.reference
+        existing = self._durably_load_consumption_receipt(reference)
+        if existing is not None:
+            consumed = self._computed_consumption(reference, materialize_delivery=False)
+            if (
+                existing.event_counts != consumed.event_counts
+                or existing.effect_digest != consumed.effect_digest
+            ):
+                raise ValueError("sync result consumption receipt does not match events")
+            # Delivery is validated independently: an existing artifact must
+            # never be rebuilt from mutable durable handoff state.
+            self._require_delivery_binding(reference, existing.handoff_delivery)
+            return SyncResultConsumption(
+                "already_consumed",
+                reference,
+                existing.event_counts,
+                existing.effect_digest,
+                existing.handoff_delivery,
+            )
+        consumed = self._computed_consumption(reference)
+        payload = _canonical_json(consumed.receipt_payload())
+        if len(payload) > _MAX_PENDING_BYTES:
+            raise ValueError("sync result consumption receipt exceeds its byte limit")
+        with self._open_directory() as directory:
+            _atomic_write_at(
+                directory.descriptor,
+                _consumption_name(reference),
+                payload,
+                replace_existing=False,
+            )
+            directory.validate()
+        stored = self._durably_load_consumption_receipt(reference)
+        if stored is None or (
+            stored.event_counts != consumed.event_counts
+            or stored.effect_digest != consumed.effect_digest
+            or stored.handoff_delivery != consumed.handoff_delivery
+        ):
+            raise ValueError("sync result consumption receipt was not persisted")
+        return stored
+
+    def _computed_consumption(
+        self, reference: SyncResultReference, *, materialize_delivery: bool = True
+    ) -> SyncResultConsumption:
+        """Return the full-stream consumption binding without mutating state."""
+
+        self.verify(reference)
+
+        counts: Counter[str] = Counter()
+        digest = hashlib.sha256()
+        events: list[SyncEvent] = []
+        for event in self.iter_events(reference):
+            events.append(event)
+            counts[event.kind] += 1
+            digest.update(
+                _canonical_line({"kind": event.kind, "data": dict(event.data)})
+            )
+        exact_counts = {kind: counts[kind] for kind in _EVENT_KINDS}
+        if exact_counts != dict(reference.event_counts):
+            raise ValueError("sync result event stream counts do not match its reference")
+        return SyncResultConsumption(
+            "consumed",
+            reference,
+            exact_counts,
+            digest.hexdigest(),
+            self._handoff_delivery(reference, events, materialize=materialize_delivery),
+        )
+
+    def _handoff_delivery(
+        self,
+        reference: SyncResultReference,
+        events: list[SyncEvent],
+        *,
+        materialize: bool,
+    ) -> HandoffDeliveryReference | None:
+        """Materialize typed durable handoffs only when exact manifest effects name them."""
+        expected = self._handoff_sources(reference, events)
+        if not expected:
+            return None
+        if not materialize:
+            return None
+        self._require_handoff_sources(reference, expected)
+        from .extractors import handoff as agent_handoff
+
+        records = LedgerStore(self.paths).load_all()
+        items = agent_handoff.collect_durable_handoffs(
+            {source_id: records[source_id] for source_id in expected},
+            ExtractorRegistry.load(self.paths.registry),
+        )
+        if {item.source_id for item in items} != set(expected) or len(items) != len(
+            expected
+        ):
+            raise ValueError("durable handoffs do not match consumed source effects")
+        for item in items:
+            if agent_handoff.load_handoff_item(self.paths, item.handoff_id) != item:
+                raise ValueError("durable handoff changed before receipt delivery")
+        payload = _canonical_json(
+            {
+                "schema_version": 1,
+                "result_id": reference.result_id,
+                "reference": reference.to_dict(),
+                "items": [agent_handoff.handoff_to_dict(item) for item in items],
+            }
+        )
+        if len(payload) > _MAX_HANDOFF_RESPONSE_BYTES:
+            raise ValueError("handoff delivery exceeds its byte limit")
+        delivery = HandoffDeliveryReference(
+            reference.result_id,
+            _handoff_delivery_path(reference),
+            hashlib.sha256(payload).hexdigest(),
+            len(items),
+        )
+        with self._open_directory() as directory:
+            try:
+                _atomic_write_at(
+                    directory.descriptor,
+                    delivery.path.name,
+                    payload,
+                    replace_existing=False,
+                )
+            except FileExistsError:
+                pass
+            directory.validate()
+        self._load_handoff_delivery(delivery, reference, expected)
+        return delivery
+
+    def _handoff_sources(
+        self, reference: SyncResultReference, events: list[SyncEvent]
+    ) -> dict[str, str]:
+        expected: dict[str, str] = {}
+        for event in events:
+            if event.kind != "handoff_source_id":
+                continue
+            source_id = event.data.get("source_id")
+            record_sha256 = event.data.get("record_sha256")
+            if (
+                not isinstance(source_id, str)
+                or not isinstance(record_sha256, str)
+                or _SHA256_RE.fullmatch(record_sha256) is None
+                or source_id in expected
+            ):
+                raise ValueError("handoff effect is not an exact source identity")
+            expected[source_id] = record_sha256
+        return expected
+
+    def _require_handoff_sources(
+        self, reference: SyncResultReference, expected: Mapping[str, str]
+    ) -> None:
+        records = LedgerStore(self.paths).load_all()
+        if compute_corpus_revision(records.values()) != reference.corpus_revision:
+            raise ValueError("handoff sources do not match the consumed corpus revision")
+        for source_id, record_sha256 in expected.items():
+            record = records.get(source_id)
+            if record is None or (
+                hashlib.sha256(_canonical_record_payload(record)).hexdigest()
+                != record_sha256
+            ):
+                raise ValueError("handoff source no longer matches the consumed result")
+
+    def _load_handoff_delivery(
+        self,
+        delivery: HandoffDeliveryReference,
+        reference: SyncResultReference,
+        expected_sources: Mapping[str, str],
+        *,
+        validate_current_sources: bool = True,
+    ) -> None:
+        if delivery.result_id != reference.result_id:
+            raise ValueError("handoff delivery does not match result")
+        if validate_current_sources:
+            self._require_handoff_sources(reference, expected_sources)
+        with self._open_directory() as directory:
+            payload, observed = _read_regular_at(
+                directory.descriptor,
+                delivery.path.name,
+                label="handoff delivery",
+                synchronize=True,
+                max_bytes=_MAX_HANDOFF_RESPONSE_BYTES,
+            )
+            _fsync_directory(directory.descriptor)
+            named = os.stat(
+                delivery.path.name,
+                dir_fd=directory.descriptor,
+                follow_symlinks=False,
+            )
+            if not (
+                stat.S_ISREG(named.st_mode)
+                and _same_file_observation(observed, named)
+            ):
+                raise UnsafeFilesystemError(
+                    "handoff delivery changed while synchronized"
+                )
+            directory.validate()
+        if hashlib.sha256(payload).hexdigest() != delivery.sha256:
+            raise ValueError("handoff delivery digest mismatch")
+        value = _load_json_object(payload, "handoff delivery")
+        if (
+            set(value) != {"schema_version", "result_id", "reference", "items"}
+            or value["schema_version"] != 1
+            or value["result_id"] != reference.result_id
+            or value["reference"] != reference.to_dict()
+            or type(value["items"]) is not list
+            or len(value["items"]) != delivery.item_count
+        ):
+            raise ValueError("handoff delivery has invalid fields")
+        from .extractors import handoff as agent_handoff
+
+        items = [agent_handoff._decode_item(item) for item in value["items"]]
+        if (
+            len({item.handoff_id for item in items}) != len(items)
+            or {item.source_id for item in items} != set(expected_sources)
+            or any(
+                agent_handoff.load_handoff_item(self.paths, item.handoff_id) != item
+                for item in items
+            )
+        ):
+            raise ValueError("handoff delivery does not match durable handoffs")
+
+    def _require_delivery_binding(
+        self,
+        reference: SyncResultReference,
+        delivery: HandoffDeliveryReference | None,
+        *,
+        validate_current_sources: bool = True,
+    ) -> None:
+        sources = self._handoff_sources(reference, list(self.iter_events(reference)))
+        if not sources:
+            if delivery is not None:
+                raise ValueError("handoff delivery exists without a handoff effect")
+        elif delivery is None:
+            raise ValueError("handoff delivery is missing from consumption receipt")
+        else:
+            self._load_handoff_delivery(
+                delivery,
+                reference,
+                sources,
+                validate_current_sources=validate_current_sources,
+            )
+
+    def load_consumption_receipt(
+        self, reference: SyncResultReference
+    ) -> SyncResultConsumption | None:
+        self.verify(reference)
+        with self._open_directory() as directory:
+            try:
+                payload, _metadata = _read_regular_at(
+                    directory.descriptor,
+                    _consumption_name(reference),
+                    label="sync result consumption receipt",
+                    max_bytes=_MAX_PENDING_BYTES,
+                )
+            except FileNotFoundError:
+                return None
+            directory.validate()
+        receipt = _decode_consumption_receipt(payload, reference)
+        self._require_delivery_binding(reference, receipt.handoff_delivery)
+        return receipt
+
+    def _durably_load_consumption_receipt(
+        self, reference: SyncResultReference
+    ) -> SyncResultConsumption | None:
+        """Use one synchronized receipt observation as the authorization proof."""
+
+        self.verify(reference)
+        with self._open_directory() as directory:
+            try:
+                payload, observed = _read_regular_at(
+                    directory.descriptor,
+                    _consumption_name(reference),
+                    label="sync result consumption receipt",
+                    synchronize=True,
+                    max_bytes=_MAX_PENDING_BYTES,
+                )
+            except FileNotFoundError:
+                return None
+            directory.validate()
+            _fsync_directory(directory.descriptor)
+            named = os.stat(
+                _consumption_name(reference),
+                dir_fd=directory.descriptor,
+                follow_symlinks=False,
+            )
+            if not (
+                stat.S_ISREG(named.st_mode)
+                and _same_file_observation(observed, named)
+            ):
+                raise UnsafeFilesystemError(
+                    "sync result consumption receipt changed while synchronized"
+                )
+            directory.validate()
+        return _decode_consumption_receipt(payload, reference)
+
+    def require_consumption_receipt(
+        self, reference: SyncResultReference, *, validate_current_sources: bool = True
+    ) -> None:
+        expected = self._computed_consumption(reference, materialize_delivery=False)
+        receipt = self._durably_load_consumption_receipt(reference)
+        if receipt is None:
+            raise ValueError("sync result must be consumed before acknowledgement")
+        if (
+            receipt.event_counts != expected.event_counts
+            or receipt.effect_digest != expected.effect_digest
+        ):
+            raise ValueError("sync result consumption receipt does not match events")
+        self._require_delivery_binding(
+            reference,
+            receipt.handoff_delivery,
+            validate_current_sources=validate_current_sources,
+        )
 
     def _save_compact_receipt(self, name, receipt) -> None:
         from .ledger import _atomic_write_at
@@ -1902,6 +2341,56 @@ class SyncResultStore:
         return _PinnedDirectory.open(self.paths.root / ".brain/sync-results")
 
 
+def _consumption_name(reference: SyncResultReference) -> str:
+    return f"consumed_{reference.result_id}.json"
+
+
+def _handoff_delivery_path(reference: SyncResultReference) -> PurePosixPath:
+    return PurePosixPath(
+        ".brain", "sync-results", f"handoff-delivery_{reference.result_id}.json"
+    )
+
+
+def _decode_consumption_receipt(
+    payload: bytes, reference: SyncResultReference
+) -> SyncResultConsumption:
+    """Decode exactly one observed receipt payload without path normalization."""
+
+    value = _load_json_object(payload, "sync result consumption receipt")
+    if (
+        set(value)
+        != {
+            "schema_version",
+            "result_id",
+            "reference",
+            "event_counts",
+            "effect_digest",
+            "handoff_delivery",
+        }
+        or type(value["schema_version"]) is not int
+        or value["schema_version"] != 2
+        or type(value["result_id"]) is not str
+        or value["result_id"] != reference.result_id
+        or not isinstance(value["reference"], dict)
+        or not isinstance(value["event_counts"], dict)
+        or type(value["effect_digest"]) is not str
+        or (value["handoff_delivery"] is not None and type(value["handoff_delivery"]) is not dict)
+    ):
+        raise ValueError("sync result consumption receipt has invalid fields")
+    receipt = SyncResultConsumption(
+        "consumed",
+        SyncResultReference.from_dict(value["reference"]),
+        value["event_counts"],
+        value["effect_digest"],
+        None
+        if value["handoff_delivery"] is None
+        else HandoffDeliveryReference.from_dict(value["handoff_delivery"]),
+    )
+    if receipt.reference != reference:
+        raise ValueError("sync result consumption receipt reference does not match")
+    return receipt
+
+
 def _ensure_result_directory(paths: RepoPaths) -> None:
     with _PinnedDirectory.open(paths.root) as root:
         parent = root.descriptor
@@ -2178,7 +2667,8 @@ def _event_identity(
 
 def _public_event_data(event: SyncEvent) -> dict[str, JSONValue]:
     data = dict(event.data)
-    data.pop("record_sha256", None)
+    if event.kind != "handoff_source_id":
+        data.pop("record_sha256", None)
     if event.kind == "coverage_gap":
         data.pop("source_id", None)
         data.pop("occurrence", None)

@@ -13,6 +13,7 @@ from .commands import (
     CommandServices,
     acknowledge_sync_result_id,
     adopt_source_version,
+    consume_sync_result_id,
     doctor,
     init_sources,
     register_source_extraction,
@@ -176,6 +177,8 @@ def _dispatch(
         )
     if command == "source acknowledge-sync-result":
         return acknowledge_sync_result_id(cwd, namespace.result_id)
+    if command == "source consume-sync-result":
+        return consume_sync_result_id(cwd, namespace.result_id)
     if command == "source register-extraction":
         return register_source_extraction(
             cwd,
@@ -391,7 +394,7 @@ def _links_candidates_command(namespace: argparse.Namespace, cwd: Path) -> Comma
             if namespace.page_path is None or not namespace.term:
                 raise ValueError("a page path and at least one --term are required")
             logical = canonical_wiki_logical_path(
-                paths, namespace.page_path, allow_absent=False
+                paths, namespace.page_path, allow_absent=True
             )
             page_path = paths.root / logical
         cleanup_search_runs(paths)
@@ -568,7 +571,7 @@ def _build_parser() -> _Parser:
         epilog=(
             "Public commands: doctor, init, sync, status, search, "
             "source snapshot-url, source register-extraction, source adopt-version, "
-            "source acknowledge-sync-result, "
+            "source consume-sync-result, source acknowledge-sync-result, "
             "wiki apply, wiki recover, links candidates, links check, validate --full."
         ),
     )
@@ -657,6 +660,16 @@ def _build_parser() -> _Parser:
         command="source acknowledge-sync-result",
     )
     acknowledgement.add_argument(
+        "--result-id",
+        required=True,
+        type=_result_id,
+    )
+    consumption = _add_route(
+        source_routes,
+        "consume-sync-result",
+        command="source consume-sync-result",
+    )
+    consumption.add_argument(
         "--result-id",
         required=True,
         type=_result_id,

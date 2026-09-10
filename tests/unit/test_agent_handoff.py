@@ -93,6 +93,10 @@ def test_thousand_handoffs_survive_delivery_replay_ack_and_later_sync(
     if interruption is None:
         assert retry == first
     receipt = retry["data"]["result_manifest"]["result_id"]
+    consumed = run_brain_json(
+        repo_paths.root, "source", "consume-sync-result", "--result-id", receipt
+    )
+    assert consumed["ok"]
     ack = run_brain_json(
         repo_paths.root, "source", "acknowledge-sync-result", "--result-id", receipt
     )

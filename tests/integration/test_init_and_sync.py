@@ -4,6 +4,7 @@ import io
 import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 from collections import Counter
@@ -192,6 +193,9 @@ def run_brain(
                         pending.reference
                     )
                 )
+                assert commands.consume_sync_result_id(
+                    repo_root, pending.reference.result_id
+                ).ok
                 assert commands.acknowledge_sync_result_id(
                     repo_root, pending.reference.result_id
                 ).ok
@@ -1093,6 +1097,7 @@ def test_failed_cli_output_keeps_exact_sync_result_pending_for_replay(
     assert replayed_payload["data"]["result_manifest"] == pending.reference.to_dict()
     assert replayed_payload["data"]["new_active_representation_count"] == 1
     assert list(result_store.iter_events(pending.reference)) == first_events
+    assert commands.consume_sync_result_id(repo_root, pending.reference.result_id).ok
     assert commands.acknowledge_sync_result_id(
         repo_root, pending.reference.result_id
     ).ok
@@ -1109,6 +1114,7 @@ def test_direct_sync_result_requires_explicit_idempotent_consumer_acknowledgemen
 
     assert pending is not None
     assert result.data["result_manifest"] == pending.reference.to_dict()
+    assert commands.consume_sync_result_id(repo_root, pending.reference.result_id).ok
     commands.acknowledge_sync_result(repo_root, result)
     commands.acknowledge_sync_result(repo_root, result)
     assert result_store.load_pending() is None
@@ -1139,6 +1145,64 @@ def test_unacknowledged_cli_result_replays_until_explicit_idempotent_ack(
     assert replayed.returncode == 0
     assert json.loads(replayed.stdout)["data"]["result_manifest"] == reference
     assert SyncResultStore(RepoPaths.discover(repo_root)).load_pending() is not None
+
+    wrong_consumption = invoke(
+        "--json",
+        "source",
+        "consume-sync-result",
+        "--result-id",
+        "sync_" + "0" * 64,
+    )
+    assert wrong_consumption.returncode == 1
+    assert SyncResultStore(RepoPaths.discover(repo_root)).load_pending() is not None
+
+    early_acknowledgement = invoke(
+        "--json",
+        "source",
+        "acknowledge-sync-result",
+        "--result-id",
+        result_id,
+    )
+    assert early_acknowledgement.returncode == 1
+    assert "consumed before acknowledgement" in early_acknowledgement.stdout
+    assert SyncResultStore(RepoPaths.discover(repo_root)).load_pending() is not None
+
+    consumed = invoke(
+        "--json",
+        "source",
+        "consume-sync-result",
+        "--result-id",
+        result_id,
+    )
+    consumed_payload = json.loads(consumed.stdout)
+    assert consumed.returncode == 0
+    assert consumed_payload["ok"] is True
+    assert consumed_payload["data"] == {
+        **{
+            "result_id": result_id,
+            "status": "consumed",
+            "manifest_path": reference["path"],
+            "corpus_revision": reference["corpus_revision"],
+            "event_counts": reference["event_counts"],
+        },
+        "effect_digest": consumed_payload["data"]["effect_digest"],
+        "handoff_delivery": None,
+    }
+    assert re.fullmatch(r"[0-9a-f]{64}", consumed_payload["data"]["effect_digest"])
+
+    repeated_consumption = invoke(
+        "--json",
+        "source",
+        "consume-sync-result",
+        "--result-id",
+        result_id,
+    )
+    assert repeated_consumption.returncode == 0
+    repeated_payload = json.loads(repeated_consumption.stdout)
+    assert repeated_payload["data"] == {
+        **consumed_payload["data"],
+        "status": "already_consumed",
+    }
 
     wrong = invoke(
         "--json",
@@ -1688,6 +1752,7 @@ def test_pending_staged_acknowledgement_validates_checkpoint_before_cleanup(
     )
     ledger.save(changed)
     assert compute_corpus_revision((changed,)) == pending.reference.corpus_revision
+    assert commands.consume_sync_result_id(repo_root, pending.reference.result_id).ok
 
     acknowledged = commands.acknowledge_sync_result_id(
         repo_root,
@@ -1710,6 +1775,7 @@ def test_pending_staged_acknowledgement_completes_recovery_once(
         repo_root,
         monkeypatch,
     )
+    assert commands.consume_sync_result_id(repo_root, pending.reference.result_id).ok
 
     acknowledged = commands.acknowledge_sync_result_id(
         repo_root,

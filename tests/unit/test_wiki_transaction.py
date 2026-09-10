@@ -283,6 +283,86 @@ def test_tampered_retained_proof_fails_before_live_write(scenario_repo) -> None:
     assert not (scenario.root / ".brain/wiki-transaction.json").exists()
 
 
+def test_preflight_rejects_a_routine_manifest_that_creates_preferred_state(
+    scenario_repo,
+) -> None:
+    """The canonicalized full postimage must run the decision transition gate."""
+
+    scenario = scenario_repo("workflow/answer")
+    question = scenario.paths.wiki_questions / "what-is-alpha.md"
+    replacement = (
+        question.read_text(encoding="utf-8")
+        .replace(
+            "interpretation_decision: not_applicable",
+            "interpretation_decision: preferred\n"
+            "interpretation_preference_citation_id: cite-alpha-exception-line-4\n"
+            "interpretation_approval_event_id: approval-1",
+        )
+    )
+    change = stage_wiki_write(scenario, "wiki/questions/what-is-alpha.md", replacement)
+
+    with pytest.raises(WikiPreflightError, match="resolve_contradiction"):
+        apply_wiki_manifest(scenario.paths, scenario.ledger, manifest_for(scenario, (change,)))
+
+
+@pytest.mark.parametrize(
+    ("replacement", "intent", "approval_event_id", "error_code"),
+    (
+        (
+            (
+                ("answer_status: answered", "answer_status: conflicted"),
+                ("interpretation_decision: not_applicable", "interpretation_decision: unresolved"),
+            ),
+            "routine",
+            None,
+            "interpretation_unresolved_evidence_insufficient",
+        ),
+        (
+            (
+                (
+                    "interpretation_decision: not_applicable",
+                    "interpretation_decision: preferred\n"
+                    "interpretation_preference_citation_id: cite-not-defined\n"
+                    "interpretation_approval_event_id: approval-2",
+                ),
+            ),
+            "resolve_contradiction",
+            "approval-2",
+            "interpretation_preference_citation_missing",
+        ),
+    ),
+)
+def test_preflight_rejects_semantically_invalid_interpretation_documents(
+    scenario_repo,
+    replacement: tuple[tuple[str, str], ...],
+    intent: str,
+    approval_event_id: str | None,
+    error_code: str,
+) -> None:
+    """Publication checks canonical question semantics, not just citations/transitions."""
+
+    scenario = scenario_repo("workflow/answer")
+    question = scenario.paths.wiki_questions / "what-is-alpha.md"
+    replacement_text = question.read_text(encoding="utf-8")
+    for old, new in replacement:
+        replacement_text = replacement_text.replace(old, new)
+    change = stage_wiki_write(
+        scenario, "wiki/questions/what-is-alpha.md", replacement_text
+    )
+
+    with pytest.raises(WikiPreflightError, match=error_code):
+        apply_wiki_manifest(
+            scenario.paths,
+            scenario.ledger,
+            manifest_for(
+                scenario,
+                (change,),
+                intent=intent,
+                approval_event_id=approval_event_id,
+            ),
+        )
+
+
 def test_missing_in_memory_proof_is_a_coverage_gate_before_live_write(scenario_repo) -> None:
     scenario = scenario_repo("graph/valid")
     alpha = scenario.paths.wiki_pages / "alpha.md"

@@ -119,11 +119,14 @@ objects with unique `(source_id, content_sha256)` keys. It changes only the matc
 definition's original destination. It preserves all other versions, sources,
 identity fields, claim markers, prose, code, and extracted links.
 
-The exact rewrite set comes from `VersionAdoption.citation_rewrites` or all verified
-`citation_rewrite` events streamed from `SyncResultStore.iter_events(reference)`.
-`SyncReport.citation_rewrites` is only a bounded display sample. Consumers drain
-the verified exact events, durably deduplicate and apply `result_id`, then explicitly
-acknowledge the result.
+The exact rewrite set comes from `VersionAdoption.citation_rewrites` or the immutable
+manifest returned by `./brain --json source consume-sync-result --result-id "$result_id"`.
+Clients require that command's result ID, `manifest_path`, revision, exact counts, and
+effect digest to match the retained response, then read the path only for exact events.
+`SyncReport.citation_rewrites` is only a bounded display sample. Consumers durably
+deduplicate and apply `result_id`, then separately acknowledge it; acknowledgement
+requires the matching consumption receipt. `SyncResultStore.verify` and `iter_events`
+are implementation behind the CLI, never executable client instructions.
 
 Every wiki transaction also runs `canonicalize_citation_destinations` against the
 ledger. This idempotent durability fallback restores both evidence destinations
