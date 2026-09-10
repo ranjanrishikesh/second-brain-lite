@@ -1,0 +1,16 @@
+{
+  "paths": [
+    "repo/config/extractors.toml",
+    "repo/sources/extracted/.gitkeep",
+    "repo/sources/ledger.md",
+    "repo/sources/ledger/.gitkeep",
+    "repo/sources/raw/_versions/.gitkeep",
+    "repo/sources/raw/_web/.gitkeep",
+    "repo/wiki/index.md",
+    "repo/wiki/pages/.gitkeep",
+    "repo/wiki/questions/.gitkeep"
+  ],
+  "scenario_id": "repository-development-not-archived",
+  "schema_version": 1,
+  "tree_sha256": "43bf744166ac0998aef73abdf45c86f02b76e3a24adad2871608246d1b9621f0"
+}

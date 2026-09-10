@@ -1,0 +1,50 @@
+{
+  "approval_script": [],
+  "fixture_id": "empty-wiki-first-question",
+  "fixture_setup": [
+    "One active Alpha/Beta text representation is ledgered.",
+    "Wiki pages and questions contain only approved sentinels.",
+    "The initial corpus revision is deterministic."
+  ],
+  "forbidden_events": [
+    "build_wiki_evidence_packet",
+    "answer_without_citation",
+    "skip_source_pass",
+    "create_empty_stub"
+  ],
+  "id": "empty-wiki-first-question",
+  "network_mode": "disabled",
+  "prompt": "What does the Alpha source say about the Beta relationship?",
+  "receipt_operations": [
+    "initial_sync"
+  ],
+  "repository_assertions": [
+    "Exactly one evolving Alpha question record exists.",
+    "Every factual answer passage has an exact resolving source-version-derivation citation.",
+    "Every qualifying Alpha or Beta page relationship is reciprocal."
+  ],
+  "required_events": [
+    "initial_sync_receipt_verified",
+    "initial_sync_receipt_consumed",
+    "initial_sync_receipt_durable",
+    "initial_sync_receipt_acknowledged",
+    "wiki_reconcile_citations",
+    "wiki_search_drained",
+    "wiki_no_supported_evidence",
+    "judge_insufficient",
+    "source_pass_discovery",
+    "source_pass_discovery_drained",
+    "source_pass_expansion",
+    "source_pass_expansion_drained",
+    "source_pass_verification",
+    "source_pass_verification_drained",
+    "write_wiki_question",
+    "link_candidates_drained",
+    "wiki_apply",
+    "links_check",
+    "validate"
+  ],
+  "schema_version": 1,
+  "skill": "brain-answer",
+  "title": "An empty wiki requires complete local research before its first answer"
+}

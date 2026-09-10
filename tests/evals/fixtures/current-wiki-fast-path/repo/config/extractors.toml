@@ -1,0 +1,227 @@
+schema_version = 1
+
+[[extractors]]
+id = "text"
+version = "1"
+timeout_seconds = 30
+max_output_bytes = 268435456
+mimes = ["text/plain", "text/markdown"]
+extensions = [".txt", ".md", ".markdown"]
+mode = "python"
+output_suffix = ".md"
+anchors = ["line"]
+agent_fallback = false
+[extractors.preferred]
+id = "builtin.text"
+argv = ["{input}", "{output}"]
+
+[[extractors]]
+id = "tabular"
+version = "1"
+timeout_seconds = 60
+max_output_bytes = 268435456
+mimes = ["text/csv", "text/tab-separated-values"]
+extensions = [".csv", ".tsv"]
+mode = "python"
+output_suffix = ".md"
+anchors = ["row"]
+agent_fallback = false
+[extractors.preferred]
+id = "builtin.tabular"
+argv = ["{input}", "{output}"]
+
+[[extractors]]
+id = "json"
+version = "1"
+timeout_seconds = 60
+max_output_bytes = 268435456
+mimes = ["application/json", "application/ld+json", "application/x-ndjson"]
+extensions = [".json", ".jsonl", ".ndjson"]
+mode = "python"
+output_suffix = ".md"
+anchors = ["block"]
+agent_fallback = false
+[extractors.preferred]
+id = "builtin.json"
+argv = ["{input}", "{output}"]
+
+[[extractors]]
+id = "html"
+version = "1"
+timeout_seconds = 120
+max_output_bytes = 268435456
+mimes = ["text/html", "application/xhtml+xml"]
+extensions = [".html", ".htm", ".xhtml"]
+mode = "command"
+output_suffix = ".md"
+anchors = ["section"]
+agent_fallback = true
+agent_revision = "1"
+[extractors.preferred]
+id = "pandoc"
+executable = "pandoc"
+argv = ["--from=html", "--to=gfm", "--wrap=none", "{input}", "--output", "{output}"]
+version_args = ["--version"]
+[extractors.preferred.install]
+macos = ["brew", "install", "pandoc"]
+linux = ["sudo", "apt-get", "install", "pandoc"]
+windows = ["winget", "install", "--id", "JohnMacFarlane.Pandoc", "-e"]
+[[extractors.fallbacks]]
+id = "builtin.html"
+argv = ["{input}", "{output}"]
+
+[[extractors]]
+id = "pdf"
+version = "1"
+timeout_seconds = 120
+max_output_bytes = 536870912
+mimes = ["application/pdf"]
+extensions = [".pdf"]
+mode = "command"
+output_suffix = ".md"
+anchors = ["page"]
+agent_fallback = true
+agent_revision = "1"
+[extractors.preferred]
+id = "poppler.pdftotext"
+executable = "pdftotext"
+argv = ["-layout", "-enc", "UTF-8", "{input}", "{output}"]
+version_args = ["-v"]
+[extractors.preferred.install]
+macos = ["brew", "install", "poppler"]
+linux = ["sudo", "apt-get", "install", "poppler-utils"]
+windows = ["winget", "install", "--id", "oschwartz10612.Poppler", "-e"]
+[[extractors.fallbacks]]
+id = "python.pymupdf"
+python_distribution = "PyMuPDF"
+argv = ["{input}", "{output}"]
+[extractors.fallbacks.install]
+macos = ["python3", "-m", "pip", "install", "PyMuPDF"]
+linux = ["python3", "-m", "pip", "install", "PyMuPDF"]
+windows = ["py", "-3", "-m", "pip", "install", "PyMuPDF"]
+
+[[extractors]]
+id = "docx"
+version = "1"
+timeout_seconds = 120
+max_output_bytes = 268435456
+mimes = ["application/vnd.openxmlformats-officedocument.wordprocessingml.document"]
+extensions = [".docx"]
+mode = "command"
+output_suffix = ".md"
+anchors = ["section"]
+agent_fallback = false
+[extractors.preferred]
+id = "pandoc"
+executable = "pandoc"
+argv = ["--from=docx", "--to=gfm", "--wrap=none", "{input}", "--output", "{output}"]
+version_args = ["--version"]
+[extractors.preferred.install]
+macos = ["brew", "install", "pandoc"]
+linux = ["sudo", "apt-get", "install", "pandoc"]
+windows = ["winget", "install", "--id", "JohnMacFarlane.Pandoc", "-e"]
+[[extractors.fallbacks]]
+id = "python.python-docx"
+python_distribution = "python-docx"
+argv = ["{input}", "{output}"]
+[extractors.fallbacks.install]
+macos = ["python3", "-m", "pip", "install", "python-docx"]
+linux = ["python3", "-m", "pip", "install", "python-docx"]
+windows = ["py", "-3", "-m", "pip", "install", "python-docx"]
+
+[[extractors]]
+id = "pptx"
+version = "1"
+timeout_seconds = 180
+max_output_bytes = 268435456
+mimes = ["application/vnd.openxmlformats-officedocument.presentationml.presentation"]
+extensions = [".pptx"]
+mode = "python"
+output_suffix = ".md"
+anchors = ["slide"]
+agent_fallback = true
+agent_revision = "1"
+[extractors.preferred]
+id = "python.python-pptx"
+python_distribution = "python-pptx"
+argv = ["{input}", "{output}"]
+[extractors.preferred.install]
+macos = ["python3", "-m", "pip", "install", "python-pptx"]
+linux = ["python3", "-m", "pip", "install", "python-pptx"]
+windows = ["py", "-3", "-m", "pip", "install", "python-pptx"]
+[[extractors.fallbacks]]
+id = "libreoffice"
+executable = "soffice"
+argv = ["--headless", "--convert-to", "txt", "--outdir", "{output}", "{input}"]
+version_args = ["--version"]
+[extractors.fallbacks.install]
+macos = ["brew", "install", "--cask", "libreoffice"]
+linux = ["sudo", "apt-get", "install", "libreoffice"]
+windows = ["winget", "install", "--id", "TheDocumentFoundation.LibreOffice", "-e"]
+
+[[extractors]]
+id = "xlsx"
+version = "1"
+timeout_seconds = 180
+max_output_bytes = 536870912
+mimes = ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"]
+extensions = [".xlsx"]
+mode = "python"
+output_suffix = ".md"
+anchors = ["sheet", "row"]
+agent_fallback = false
+[extractors.preferred]
+id = "python.openpyxl"
+python_distribution = "openpyxl"
+argv = ["{input}", "{output}"]
+[extractors.preferred.install]
+macos = ["python3", "-m", "pip", "install", "openpyxl"]
+linux = ["python3", "-m", "pip", "install", "openpyxl"]
+windows = ["py", "-3", "-m", "pip", "install", "openpyxl"]
+[[extractors.fallbacks]]
+id = "libreoffice"
+executable = "soffice"
+argv = ["--headless", "--convert-to", "csv", "--outdir", "{output}", "{input}"]
+version_args = ["--version"]
+[extractors.fallbacks.install]
+macos = ["brew", "install", "--cask", "libreoffice"]
+linux = ["sudo", "apt-get", "install", "libreoffice"]
+windows = ["winget", "install", "--id", "TheDocumentFoundation.LibreOffice", "-e"]
+
+[[extractors]]
+id = "image"
+version = "1"
+timeout_seconds = 180
+max_output_bytes = 268435456
+mimes = ["image/png", "image/jpeg", "image/tiff", "image/webp"]
+extensions = [".png", ".jpg", ".jpeg", ".tif", ".tiff", ".webp"]
+mode = "command"
+output_suffix = ".md"
+anchors = ["block"]
+agent_fallback = true
+agent_revision = "1"
+[extractors.preferred]
+id = "tesseract"
+executable = "tesseract"
+argv = ["{input}", "stdout", "-l", "eng"]
+version_args = ["--version"]
+[extractors.preferred.install]
+macos = ["brew", "install", "tesseract"]
+linux = ["sudo", "apt-get", "install", "tesseract-ocr"]
+windows = ["winget", "install", "--id", "UB-Mannheim.TesseractOCR", "-e"]
+
+[[extractors]]
+id = "webpage"
+version = "1"
+timeout_seconds = 120
+max_output_bytes = 536870912
+mimes = ["application/x.second-brain-url-descriptor"]
+extensions = [".url.md"]
+mode = "web_capture"
+output_suffix = ".md"
+anchors = ["section"]
+agent_fallback = true
+agent_revision = "1"
+[extractors.preferred]
+id = "builtin.http-capture"
+argv = ["{input}", "{output}"]

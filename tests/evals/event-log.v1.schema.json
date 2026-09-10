@@ -1,0 +1,470 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://second-brain-lite.local/schemas/eval-event-log.v1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "run_id",
+    "scenario_id",
+    "client",
+    "client_version",
+    "fixture_sha256",
+    "network_mode",
+    "evidence_index_sha256",
+    "log_attestation_sha256",
+    "executions",
+    "receipts",
+    "deliveries",
+    "events",
+    "repository_assertions",
+    "result",
+    "incomplete_reasons"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "run_id": {
+      "type": "string",
+      "pattern": "[0-9a-f]{64}"
+    },
+    "scenario_id": {
+      "type": "string",
+      "pattern": "[a-z0-9]+(?:-[a-z0-9]+)*"
+    },
+    "client": {
+      "enum": [
+        "codex",
+        "claude"
+      ]
+    },
+    "client_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "fixture_sha256": {
+      "type": "string",
+      "pattern": "[0-9a-f]{64}"
+    },
+    "network_mode": {
+      "enum": [
+        "disabled",
+        "mock_only"
+      ]
+    },
+    "evidence_index_sha256": {
+      "type": "string",
+      "pattern": "[0-9a-f]{64}"
+    },
+    "log_attestation_sha256": {
+      "type": "string",
+      "pattern": "[0-9a-f]{64}"
+    },
+    "executions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "phase",
+          "kind",
+          "policy_id",
+          "process_id",
+          "transcript_id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "[a-z][a-z0-9._-]*"
+          },
+          "phase": {
+            "enum": [
+              "main",
+              "approval",
+              "approved_capture"
+            ]
+          },
+          "kind": {
+            "const": "actual_client_process"
+          },
+          "policy_id": {
+            "type": "string",
+            "pattern": "[a-z][a-z0-9._-]*"
+          },
+          "process_id": {
+            "type": "string",
+            "pattern": "[a-z][a-z0-9._-]*"
+          },
+          "transcript_id": {
+            "type": "string",
+            "pattern": "[a-z][a-z0-9._-]*"
+          }
+        }
+      }
+    },
+    "receipts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "operation",
+          "verify_command_id",
+          "consume_command_id",
+          "durable_command_id",
+          "acknowledge_command_id",
+          "delivery_id",
+          "stream_artifact_id",
+          "durable_artifact_id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "[a-z][a-z0-9._-]*"
+          },
+          "operation": {
+            "enum": [
+              "initial_sync",
+              "post_registration_sync",
+              "init",
+              "initial_snapshot",
+              "rendered_snapshot"
+            ]
+          },
+          "verify_command_id": {
+            "type": "string",
+            "pattern": "[a-z][a-z0-9._-]*"
+          },
+          "consume_command_id": {
+            "type": "string",
+            "pattern": "[a-z][a-z0-9._-]*"
+          },
+          "durable_command_id": {
+            "type": "string",
+            "pattern": "[a-z][a-z0-9._-]*"
+          },
+          "acknowledge_command_id": {
+            "type": "string",
+            "pattern": "[a-z][a-z0-9._-]*"
+          },
+          "delivery_id": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "string",
+                "pattern": "[a-z][a-z0-9._-]*"
+              }
+            ]
+          },
+          "stream_artifact_id": {
+            "type": "string",
+            "pattern": "[a-z][a-z0-9._-]*"
+          },
+          "durable_artifact_id": {
+            "type": "string",
+            "pattern": "[a-z][a-z0-9._-]*"
+          }
+        }
+      }
+    },
+    "deliveries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "receipt_id",
+          "delivery_artifact_id",
+          "items"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "[a-z][a-z0-9._-]*"
+          },
+          "receipt_id": {
+            "type": "string",
+            "pattern": "[a-z][a-z0-9._-]*"
+          },
+          "delivery_artifact_id": {
+            "type": "string",
+            "pattern": "[a-z][a-z0-9._-]*"
+          },
+          "items": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "item_id",
+                "kind",
+                "handoff_id",
+                "handoff_source_id",
+                "payload_sha256"
+              ],
+              "properties": {
+                "item_id": {
+                  "type": "string",
+                  "pattern": "[a-z][a-z0-9._-]*"
+                },
+                "kind": {
+                  "enum": [
+                    "extraction",
+                    "rendered_web_capture"
+                  ]
+                },
+                "handoff_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "handoff_source_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "payload_sha256": {
+                  "type": "string",
+                  "pattern": "[0-9a-f]{64}"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "events": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sequence",
+          "name",
+          "execution_id",
+          "transcript_marker_id",
+          "event_record_id",
+          "corroboration_ids",
+          "data",
+          "evidence_mode"
+        ],
+        "properties": {
+          "sequence": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string",
+            "pattern": "[a-z][a-z0-9_]*"
+          },
+          "execution_id": {
+            "type": "string",
+            "pattern": "[a-z][a-z0-9._-]*"
+          },
+          "transcript_marker_id": {
+            "type": "string",
+            "pattern": "[a-z][a-z0-9._-]*"
+          },
+          "event_record_id": {
+            "type": "string",
+            "pattern": "[a-z][a-z0-9._-]*"
+          },
+          "corroboration_ids": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "[a-z][a-z0-9._-]*"
+            }
+          },
+          "data": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [],
+                "properties": {}
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "receipt_id"
+                ],
+                "properties": {
+                  "receipt_id": {
+                    "type": "string",
+                    "pattern": "[a-z][a-z0-9._-]*"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "cursor_command_id"
+                ],
+                "properties": {
+                  "cursor_command_id": {
+                    "type": "string",
+                    "pattern": "[a-z][a-z0-9._-]*"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "approval_id"
+                ],
+                "properties": {
+                  "approval_id": {
+                    "type": "string",
+                    "pattern": "[a-z][a-z0-9._-]*"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "diff_id"
+                ],
+                "properties": {
+                  "diff_id": {
+                    "type": "string",
+                    "pattern": "[a-z][a-z0-9._-]*"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "delivery_id",
+                  "item_mappings"
+                ],
+                "properties": {
+                  "delivery_id": {
+                    "type": "string",
+                    "pattern": "[a-z][a-z0-9._-]*"
+                  },
+                  "item_mappings": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "item_id",
+                        "handoff_source_id"
+                      ],
+                      "properties": {
+                        "item_id": {
+                          "type": "string",
+                          "pattern": "[a-z][a-z0-9._-]*"
+                        },
+                        "handoff_source_id": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "delivery_id",
+                  "item_id",
+                  "handoff_id",
+                  "handoff_source_id"
+                ],
+                "properties": {
+                  "delivery_id": {
+                    "type": "string",
+                    "pattern": "[a-z][a-z0-9._-]*"
+                  },
+                  "item_id": {
+                    "type": "string",
+                    "pattern": "[a-z][a-z0-9._-]*"
+                  },
+                  "handoff_id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "handoff_source_id": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            ]
+          },
+          "evidence_mode": {
+            "enum": [
+              "product_cli",
+              "fixture_eval",
+              "marker",
+              "marker_diff",
+              "marker_approval",
+              "marker_delivery"
+            ]
+          }
+        }
+      }
+    },
+    "repository_assertions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "text",
+          "assertion_id",
+          "diff_id",
+          "passed"
+        ],
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1
+          },
+          "assertion_id": {
+            "type": "string",
+            "pattern": "[a-z][a-z0-9._-]*"
+          },
+          "diff_id": {
+            "type": "string",
+            "pattern": "[a-z][a-z0-9._-]*"
+          },
+          "passed": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "result": {
+      "enum": [
+        "pass",
+        "fail",
+        "incomplete"
+      ]
+    },
+    "incomplete_reasons": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  }
+}

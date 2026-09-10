@@ -1,0 +1,32 @@
+{
+  "approval_script": [],
+  "fixture_id": "repository-development-not-archived",
+  "fixture_setup": [
+    "The repository has a valid initialized empty corpus.",
+    "The request concerns CLI code and tests.",
+    "Wiki pages and question trees are clean before development work."
+  ],
+  "forbidden_events": [
+    "invoke_brain_answer",
+    "write_wiki_question",
+    "write_wiki_page",
+    "wiki_apply",
+    "source_sync"
+  ],
+  "id": "repository-development-not-archived",
+  "network_mode": "disabled",
+  "prompt": "Add a --dry-run flag to the sync command and test it.",
+  "receipt_operations": [],
+  "repository_assertions": [
+    "No wiki question file is added or changed.",
+    "No wiki page file is added or changed.",
+    "Only requested software-development paths may differ."
+  ],
+  "required_events": [
+    "classify_repository_development",
+    "use_software_workflow"
+  ],
+  "schema_version": 1,
+  "skill": "brain-answer",
+  "title": "Repository development remains outside the knowledge archive"
+}

@@ -1,0 +1,47 @@
+{
+  "approval_script": [],
+  "fixture_id": "current-wiki-fast-path",
+  "fixture_setup": [
+    "The Alpha page and question cover the prompt.",
+    "All citations resolve at the current revision.",
+    "The current question lacks the requested risk-review phrasing."
+  ],
+  "forbidden_events": [
+    "source_pass_discovery",
+    "source_pass_expansion",
+    "source_pass_verification",
+    "public_web_access",
+    "duplicate_question_record",
+    "direct_live_wiki_write"
+  ],
+  "id": "current-wiki-fast-path",
+  "network_mode": "disabled",
+  "prompt": "Restate the documented Alpha decision for a risk review, preserving this new phrasing in the same topic record.",
+  "receipt_operations": [
+    "initial_sync"
+  ],
+  "repository_assertions": [
+    "The existing question ID remains unique and its same file records the new risk-review phrasing.",
+    "The Q&A update is published by one wiki transaction while source and ledger content stay unchanged.",
+    "Every underlying citation is revalidated against the current ledger before WikiEvidencePacket sufficiency."
+  ],
+  "required_events": [
+    "initial_sync_receipt_verified",
+    "initial_sync_receipt_consumed",
+    "initial_sync_receipt_durable",
+    "initial_sync_receipt_acknowledged",
+    "wiki_reconcile_citations",
+    "wiki_search_drained",
+    "revalidate_underlying_citations",
+    "build_wiki_evidence_packet",
+    "judge_sufficient",
+    "stage_existing_question_update",
+    "link_candidates_drained",
+    "wiki_apply",
+    "links_check",
+    "validate"
+  ],
+  "schema_version": 1,
+  "skill": "brain-answer",
+  "title": "A current complete wiki answer uses the validated fast path"
+}

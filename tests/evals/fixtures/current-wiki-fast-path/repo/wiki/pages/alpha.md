@@ -1,0 +1,25 @@
+---
+id: alpha
+title: Alpha
+description: Alpha is documented.
+type: concept
+aliases: []
+created: 2026-09-04
+updated: 2026-09-04
+---
+# Alpha
+
+## Summary
+Alpha is documented.[^alpha-line]
+
+## Details
+The current local record is cited below.
+
+## Related pages
+
+## Related questions
+- [What is Alpha?](../questions/what-is-alpha.md): The durable answer record.
+
+## Sources
+
+[^alpha-line]: source_id: `src_bca30194d76672b62f7d7dc448c07116a67dadb8aca40fb8e9ddc9177dd28a7b`; content_sha256: `5a3c9123da6f3257e3a0c66d328a49953892eda74d9d8f292de518f4816fabef`; derivation_id: `drv_137cab0fbef06bd497a00f2bdd8b9065ee52cd800a786ea4cee25967a48db883`; anchor: `line:1`; [original](../../sources/raw/alpha.txt); [extracted](../../sources/extracted/alpha.txt/5a3c9123da6f3257e3a0c66d328a49953892eda74d9d8f292de518f4816fabef/drv_137cab0fbef06bd497a00f2bdd8b9065ee52cd800a786ea4cee25967a48db883.md#line:1)

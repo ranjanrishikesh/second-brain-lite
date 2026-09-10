@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://second-brain-lite.local/schemas/eval-scenario.v1.json",
+  "title": "Second Brain Lite workflow evaluation scenario",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "id", "title", "skill", "prompt", "fixture_id", "network_mode", "approval_script", "fixture_setup", "receipt_operations", "required_events", "forbidden_events", "repository_assertions"],
+  "properties": {
+    "schema_version": {"type": "integer", "const": 1},
+    "id": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
+    "title": {"type": "string", "minLength": 1},
+    "skill": {"enum": ["brain-initialize", "brain-answer", "brain-web-research", "brain-wiki-maintenance", "brain-validate"]},
+    "prompt": {"type": "string", "minLength": 1},
+    "fixture_id": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
+    "network_mode": {"enum": ["disabled", "mock_only"]},
+    "approval_script": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "interpretation_policy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["question_path", "question_id", "preserve_both", "expected_decision", "expected_approval_decision", "claim_identities"],
+      "properties": {
+        "question_path": {"type": "string", "const": "wiki/questions/what-is-alpha.md"},
+        "question_id": {"type": "string", "const": "question-what-is-alpha"},
+        "preserve_both": {"type": "boolean", "const": true},
+        "expected_decision": {"type": "string", "const": "unresolved"},
+        "expected_approval_decision": {"type": "string", "const": "withheld"},
+        "claim_identities": {
+          "type": "array", "minItems": 2, "maxItems": 2, "uniqueItems": true,
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["source_id", "content_sha256", "derivation_id"],
+            "properties": {
+              "source_id": {"type": "string", "pattern": "src_[0-9a-f]{64}"},
+              "content_sha256": {"type": "string", "pattern": "[0-9a-f]{64}"},
+              "derivation_id": {"type": "string", "pattern": "drv_[0-9a-f]{64}"}
+            }
+          }
+        }
+      }
+    },
+    "fixture_setup": {"type": "array", "minItems": 3, "items": {"type": "string", "minLength": 1}},
+    "receipt_operations": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"}},
+    "required_events": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"}},
+    "forbidden_events": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"}},
+    "repository_assertions": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
+  }
+}

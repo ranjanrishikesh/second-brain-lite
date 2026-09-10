@@ -1,0 +1,24 @@
+{
+  "paths": [
+    "repo/config/extractors.toml",
+    "repo/sources/extracted/.gitkeep",
+    "repo/sources/extracted/alpha-2024.txt/fd25af3e32d62bbd82f09c8d7a7d355a2f4426ef0675067deb09c4064aaa1648/drv_ac09b30de217409c3a859fc4c85bb05999b81ca80c0d36ab550a4cbf1de6023e.md",
+    "repo/sources/extracted/alpha-2025.txt/a9df17acda9a20f513419ec4b48a39b8eb5a4b15053b636c802f733859e4654f/drv_bab90cca5df82f0188f1651699a673c5a8bbb9619bb0ed02fbf4969d7c08bee6.md",
+    "repo/sources/ledger.md",
+    "repo/sources/ledger/.gitkeep",
+    "repo/sources/ledger/src_32cfaef006a86057e22dddc66cbbb6365d0d3616d650c3454e9d49f39c6c7414.json",
+    "repo/sources/ledger/src_4e432e9cf4d726196e7e1abbe2900181adaee3808636e2733b3c6de3fdfa0cc9.json",
+    "repo/sources/raw/_versions/.gitkeep",
+    "repo/sources/raw/_web/.gitkeep",
+    "repo/sources/raw/alpha-2024.txt",
+    "repo/sources/raw/alpha-2025.txt",
+    "repo/wiki/index.md",
+    "repo/wiki/pages/.gitkeep",
+    "repo/wiki/pages/alpha.md",
+    "repo/wiki/questions/.gitkeep",
+    "repo/wiki/questions/what-is-alpha.md"
+  ],
+  "scenario_id": "contradictory-evidence",
+  "schema_version": 1,
+  "tree_sha256": "88cf2474ee31a5c21905c20d1421905a7f62ade7a82ba5aeb3211ecd6b989f24"
+}

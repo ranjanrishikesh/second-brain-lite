@@ -1,0 +1,73 @@
+{
+  "approval_script": [
+    "Do not approve a preferred interpretation; preserve both sourced limits."
+  ],
+  "fixture_id": "contradictory-evidence",
+  "fixture_setup": [
+    "Two active dated Alpha derivations state materially different limits.",
+    "Both claims expose resolving anchors.",
+    "The existing Alpha Q&A contains only the older limit."
+  ],
+  "forbidden_events": [
+    "silently_overwrite_claim",
+    "choose_without_approval",
+    "remove_old_citation"
+  ],
+  "id": "contradictory-evidence",
+  "interpretation_policy": {
+    "claim_identities": [
+      {
+        "content_sha256": "fd25af3e32d62bbd82f09c8d7a7d355a2f4426ef0675067deb09c4064aaa1648",
+        "derivation_id": "drv_ac09b30de217409c3a859fc4c85bb05999b81ca80c0d36ab550a4cbf1de6023e",
+        "source_id": "src_32cfaef006a86057e22dddc66cbbb6365d0d3616d650c3454e9d49f39c6c7414"
+      },
+      {
+        "content_sha256": "a9df17acda9a20f513419ec4b48a39b8eb5a4b15053b636c802f733859e4654f",
+        "derivation_id": "drv_bab90cca5df82f0188f1651699a673c5a8bbb9619bb0ed02fbf4969d7c08bee6",
+        "source_id": "src_4e432e9cf4d726196e7e1abbe2900181adaee3808636e2733b3c6de3fdfa0cc9"
+      }
+    ],
+    "expected_approval_decision": "withheld",
+    "expected_decision": "unresolved",
+    "preserve_both": true,
+    "question_id": "question-what-is-alpha",
+    "question_path": "wiki/questions/what-is-alpha.md"
+  },
+  "network_mode": "disabled",
+  "prompt": "Which of the conflicting Alpha limits should I rely on?",
+  "receipt_operations": [
+    "initial_sync"
+  ],
+  "repository_assertions": [
+    "The evolving question has conflicted status.",
+    "Both dated claims retain exact resolving citations.",
+    "The terminal canonical v2 QuestionRecord stores the policy's typed unresolved decision with null preference and approval IDs."
+  ],
+  "required_events": [
+    "initial_sync_receipt_verified",
+    "initial_sync_receipt_consumed",
+    "initial_sync_receipt_durable",
+    "initial_sync_receipt_acknowledged",
+    "wiki_reconcile_citations",
+    "wiki_search_drained",
+    "revalidate_underlying_citations",
+    "judge_insufficient",
+    "source_pass_discovery",
+    "source_pass_discovery_drained",
+    "source_pass_expansion",
+    "source_pass_expansion_drained",
+    "source_pass_verification",
+    "source_pass_verification_drained",
+    "preserve_both_claims",
+    "cite_both_sides",
+    "ask_interpretation_approval",
+    "write_wiki_question",
+    "link_candidates_drained",
+    "wiki_apply",
+    "links_check",
+    "validate"
+  ],
+  "schema_version": 1,
+  "skill": "brain-answer",
+  "title": "Materially contradictory evidence is preserved and interpretation gated"
+}

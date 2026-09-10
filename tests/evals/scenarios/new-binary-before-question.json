@@ -1,0 +1,64 @@
+{
+  "approval_script": [],
+  "fixture_id": "new-binary-before-question",
+  "fixture_setup": [
+    "A valid quarterly PDF is unledgered under sources/raw.",
+    "An older cited Alpha conclusion is present.",
+    "Fixture services resolve no PDF converter and use its unavailable prerequisite digest."
+  ],
+  "forbidden_events": [
+    "answer_before_ingestion",
+    "hide_coverage_gap",
+    "rehash_unchanged_corpus",
+    "caller_controls_agent_revision",
+    "rendered_handoff_registered_as_extraction",
+    "snapshot_active_representation_for_registered_extraction"
+  ],
+  "id": "new-binary-before-question",
+  "network_mode": "disabled",
+  "prompt": "Does the new quarterly PDF change the Alpha conclusion?",
+  "receipt_operations": [
+    "initial_sync",
+    "post_registration_sync"
+  ],
+  "repository_assertions": [
+    "The new PDF has a ledgered content version and Markdown derivation before sufficiency judgment.",
+    "Registration activation is proved by data.registration.active_representation and its corpus revision.",
+    "The freshness probe is scoped to the newly active source ID."
+  ],
+  "required_events": [
+    "initial_sync_receipt_verified",
+    "initial_sync_receipt_consumed",
+    "initial_sync_receipt_durable",
+    "initial_sync_handoff_delivery_verified",
+    "initial_sync_receipt_acknowledged",
+    "branch_extraction_handoff",
+    "stage_handoff_scoped_extraction",
+    "register_extraction_handoff",
+    "verify_registration_active_representation",
+    "post_registration_sync_receipt_verified",
+    "post_registration_sync_receipt_consumed",
+    "post_registration_sync_receipt_durable",
+    "post_registration_sync_receipt_acknowledged",
+    "wiki_reconcile_citations",
+    "freshness_search_batched",
+    "freshness_search_drained",
+    "wiki_search_drained",
+    "revalidate_underlying_citations",
+    "judge_insufficient",
+    "source_pass_discovery",
+    "source_pass_discovery_drained",
+    "source_pass_expansion",
+    "source_pass_expansion_drained",
+    "source_pass_verification",
+    "source_pass_verification_drained",
+    "write_wiki_question",
+    "link_candidates_drained",
+    "wiki_apply",
+    "links_check",
+    "validate"
+  ],
+  "schema_version": 1,
+  "skill": "brain-answer",
+  "title": "A newly added binary is extracted before wiki sufficiency is judged"
+}

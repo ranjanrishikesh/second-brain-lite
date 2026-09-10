@@ -1,0 +1,68 @@
+{
+  "approval_script": [
+    "Approve only the mock standard capture after the agent states the local evidence gap and bounded scope."
+  ],
+  "fixture_id": "web-approval-and-capture",
+  "fixture_setup": [
+    "The ledger and wiki contain only the prior standard.",
+    "Local three-pass research has no current evidence.",
+    "Static, faithful rendered, and unused web candidates are fixture assets outside repo/."
+  ],
+  "forbidden_events": [
+    "web_access_before_approval",
+    "persist_unused_result",
+    "cite_browser_text",
+    "persist_claim_before_snapshot",
+    "skip_renewed_source_pass",
+    "register_rendered_handoff"
+  ],
+  "id": "web-approval-and-capture",
+  "network_mode": "mock_only",
+  "prompt": "What changed in the external standard this year?",
+  "receipt_operations": [
+    "initial_sync",
+    "initial_snapshot",
+    "rendered_snapshot"
+  ],
+  "repository_assertions": [
+    "Used page has an immutable local sources/raw/_web version.",
+    "Unused candidate has no source record.",
+    "Claim citation resolves to the local source version and derivation.",
+    "The question record stores the post-capture corpus revision and three pass terms."
+  ],
+  "required_events": [
+    "initial_sync_receipt_verified",
+    "initial_sync_receipt_consumed",
+    "initial_sync_receipt_durable",
+    "initial_sync_receipt_acknowledged",
+    "report_local_evidence_gap",
+    "ask_web_approval",
+    "public_web_access",
+    "select_used_source",
+    "snapshot_used_source",
+    "initial_snapshot_receipt_verified",
+    "initial_snapshot_receipt_consumed",
+    "initial_snapshot_receipt_durable",
+    "initial_snapshot_handoff_delivery_verified",
+    "initial_snapshot_receipt_acknowledged",
+    "branch_rendered_web_capture_handoff",
+    "stage_faithful_browser_capture",
+    "rendered_snapshot_url",
+    "rendered_snapshot_receipt_verified",
+    "rendered_snapshot_receipt_consumed",
+    "rendered_snapshot_receipt_durable",
+    "rendered_snapshot_receipt_acknowledged",
+    "verify_snapshot_active_representation",
+    "source_pass_discovery",
+    "source_pass_discovery_drained",
+    "source_pass_expansion",
+    "source_pass_expansion_drained",
+    "source_pass_verification",
+    "source_pass_verification_drained",
+    "link_candidates_drained",
+    "persist_claim"
+  ],
+  "schema_version": 1,
+  "skill": "brain-web-research",
+  "title": "Insufficient local evidence requires approval and durable capture"
+}

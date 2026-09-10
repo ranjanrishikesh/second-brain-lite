@@ -1,0 +1,22 @@
+{
+  "paths": [
+    "repo/config/extractors.toml",
+    "repo/sources/extracted/.gitkeep",
+    "repo/sources/extracted/alpha.txt/5a3c9123da6f3257e3a0c66d328a49953892eda74d9d8f292de518f4816fabef/drv_137cab0fbef06bd497a00f2bdd8b9065ee52cd800a786ea4cee25967a48db883.md",
+    "repo/sources/ledger.md",
+    "repo/sources/ledger/.gitkeep",
+    "repo/sources/ledger/src_bca30194d76672b62f7d7dc448c07116a67dadb8aca40fb8e9ddc9177dd28a7b.json",
+    "repo/sources/raw/_versions/.gitkeep",
+    "repo/sources/raw/_web/.gitkeep",
+    "repo/sources/raw/alpha.txt",
+    "repo/sources/raw/quarterly.pdf",
+    "repo/wiki/index.md",
+    "repo/wiki/pages/.gitkeep",
+    "repo/wiki/pages/alpha.md",
+    "repo/wiki/questions/.gitkeep",
+    "repo/wiki/questions/what-is-alpha.md"
+  ],
+  "scenario_id": "new-binary-before-question",
+  "schema_version": 1,
+  "tree_sha256": "4fb3c249ffcf2d457ba329a627e488de28b38d5ac7e5273c4e3370ce41c10597"
+}
