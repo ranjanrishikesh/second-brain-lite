@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import csv
+import html
 import io
 import os
 import re
@@ -119,7 +120,8 @@ class _AnchorHTML(HTMLParser):
             self.hidden.append(tag)
         for name, value in attrs:
             if name in {"id", "name"} and value is not None:
-                if value.partition(":")[0] in ANCHOR_KINDS:
+                kind, separator, _ = value.partition(":")
+                if separator and kind in ANCHOR_KINDS:
                     if (
                         self.hidden
                         or tag != "a"
@@ -457,6 +459,7 @@ def run_command(
             pass_fds=pass_fds,
         )
         deadline = time.monotonic() + timeout_seconds
+        leader_exited = False
         try:
             # Keep the dead leader pinned until its process group is killed;
             # otherwise PID reuse could target another process group.
@@ -465,11 +468,19 @@ def run_command(
                 timeout_seconds=timeout_seconds,
                 deadline=deadline,
             )
+            leader_exited = True
         finally:
             try:
                 os.killpg(process.pid, signal.SIGKILL)
             except ProcessLookupError:
                 pass
+            except PermissionError:
+                # Darwin can report EPERM instead of ESRCH when the observed,
+                # unreaped leader has exited and its process group is already
+                # gone. Do not turn a successful conversion into an unavailable
+                # converter, but keep timeout cleanup failures strict.
+                if not leader_exited:
+                    raise
             finally:
                 _bounded_wait_or_reap_later(process, deadline=deadline)
         stdout.seek(0)
@@ -619,7 +630,9 @@ def _normalize_external(text: str, job: Job) -> ExtractedPayload:
         pages = text.replace("\r\n", "\n").split("\f")
         if len(pages) > 1 and not pages[-1].strip():
             pages.pop()
-        return numbered_payload(pages, "page")
+        return numbered_payload(
+            (html.escape(page, quote=False) for page in pages), "page"
+        )
     if kind == "docx":
         return section_payload(text)
     if kind == "image":

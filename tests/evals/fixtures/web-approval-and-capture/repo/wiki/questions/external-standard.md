@@ -7,7 +7,7 @@ canonical_question: What changed in the external standard?
 prior_phrasings: [What changed in the external standard?]
 answer_status: partial
 interpretation_decision: not_applicable
-corpus_revision: 498db9958ef7600fbaafa2dfa49a92d088f2496832b808825372617581b8a147
+corpus_revision: 9f59d97240cae37e4442a12d432970c64ae9f4a66fe2ffa7593a17890d3ff8a8
 last_researched: 2026-09-04
 discovery_terms: [standard]
 expansion_terms: [limit]
@@ -30,4 +30,4 @@ None in the retained prior-standard evidence.
 
 ## Sources
 
-[^standard-1]: source_id: `src_5fe1d396dee382c793641a395a5564ab5b26150d73937dcddfb833e527142a4d`; content_sha256: `0ca629b237a303d570cf24c422ec340ba827ef25cf960f77b9f83e995bb12d1a`; derivation_id: `drv_7e36dcc612e853cdbe89e68e9f6a265dab108e80fb1c90fdef575a111a31995c`; anchor: `line:1`; [original](../../sources/raw/prior-standard.txt); [extracted](../../sources/extracted/prior-standard.txt/0ca629b237a303d570cf24c422ec340ba827ef25cf960f77b9f83e995bb12d1a/drv_7e36dcc612e853cdbe89e68e9f6a265dab108e80fb1c90fdef575a111a31995c.md#line:1)
+[^standard-1]: source_id: `src_5fe1d396dee382c793641a395a5564ab5b26150d73937dcddfb833e527142a4d`; content_sha256: `0ca629b237a303d570cf24c422ec340ba827ef25cf960f77b9f83e995bb12d1a`; derivation_id: `drv_41f539626e32c8c2f5d261676d848ced36b591fdf0b506e1bcada9c2c94d6da2`; anchor: `line:1`; [original](../../sources/raw/prior-standard.txt); [extracted](../../sources/extracted/prior-standard.txt/0ca629b237a303d570cf24c422ec340ba827ef25cf960f77b9f83e995bb12d1a/drv_41f539626e32c8c2f5d261676d848ced36b591fdf0b506e1bcada9c2c94d6da2.md#line:1)

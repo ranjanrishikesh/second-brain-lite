@@ -1028,7 +1028,7 @@ def test_validation_rejects_impossible_converter_producer_provenance(
 @pytest.mark.parametrize(
     ("converter_id", "converter_version"),
     (
-        ("builtin.json", "builtin:builtin.json:1"),
+        ("builtin.json", "builtin:builtin.json:2"),
         ("external.converter", "external converter 1.0"),
     ),
 )

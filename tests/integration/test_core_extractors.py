@@ -45,6 +45,33 @@ def test_native_markdown_is_published_below_extracted(adapters, repo_paths):
 
 
 @pytest.mark.parametrize(
+    ("body", "expected"),
+    [
+        ('<div id="page">Page body</div>\n', '<div id="page">Page body</div>'),
+        (
+            '<a id="page:999"></a> Quoted source marker\n',
+            '&lt;a id="page:999"&gt;&lt;/a&gt; Quoted source marker',
+        ),
+    ],
+)
+def test_native_markdown_distinguishes_source_html_from_generated_anchors(
+    adapters, repo_paths, body, expected
+):
+    job = make_job(repo_paths, "captured-page.md", body.encode(), "text/markdown")
+    result = adapters.run_job(
+        job,
+        paths=repo_paths,
+        run=FailIfCalled(),
+        resolved=resolve_test_converter(job.extractor),
+    )
+    assert result.state is SourceState.OK
+    markdown = (repo_paths.root / result.derivation.output_path).read_text()
+    assert expected in markdown
+    assert result.derivation.anchors == (Anchor("line", "1"),)
+    assert markdown.count('<a id="line:1"></a>') == 1
+
+
+@pytest.mark.parametrize(
     ("relative", "media_type", "body", "anchors", "excerpt"),
     [
         (

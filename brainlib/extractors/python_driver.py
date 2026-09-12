@@ -55,7 +55,11 @@ def _pdf(module: object, input_path: Path, budget: _Budget) -> ExtractedPayload:
         if document.is_encrypted:
             raise ExtractionQualityError("encrypted PDF input", code="converter_failed")
         return numbered_payload(
-            (budget.text(page.get_text("text")) for page in document), "page"
+            (
+                html.escape(budget.text(page.get_text("text")), quote=False)
+                for page in document
+            ),
+            "page",
         )
     finally:
         document.close()

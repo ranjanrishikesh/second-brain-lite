@@ -17913,10 +17913,10 @@ _INTERPRETATION_APPROVAL_NOTE = (
 # terminal decision payload is derived from sealed command/snapshot evidence.
 _PRIVATE_INTERPRETATION_DECISION_ID = "private-interpretation-decision"
 _FROZEN_CONTRADICTORY_SCENARIO_SHA256 = (
-    "4d2534394e4f6835df34c4184c7a319dcf2bb3eeaa93128033ced41483ef87c3"
+    "614ae9ad210f1c0f196eda4a055b2da7c8c6fa75c6bb2094f429d85cc29f2762"
 )
 _FROZEN_INTERPRETATION_POLICY_SHA256 = (
-    "cb17a42a7ed14502ec7a65e5b4495596091af51cfafc13bff40e1cccd3383f8a"
+    "46f421963cc78e15b378c7bb658846bbbc0e2b1ae6332a99a6ca8522d3c7dd07"
 )
 
 

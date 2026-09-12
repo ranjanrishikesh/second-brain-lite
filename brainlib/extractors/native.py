@@ -76,6 +76,11 @@ def text_payload(text: str) -> ExtractedPayload:
     normalized = text.replace("\r\n", "\n").replace("\r", "\n")
     lines = normalized.splitlines()
     anchors = tuple(Anchor("line", str(index)) for index in range(1, len(lines) + 1))
+    # Source text may quote an exact generated anchor. Preserve it as visible
+    # evidence without allowing it to masquerade as extraction metadata.
+    normalized = MARKER.sub(
+        lambda match: html.escape(match[0], quote=False), normalized
+    )
     # Physical lines may belong to tables, lists, code spans, or other multiline
     # Markdown structures. Keep their body intact and expose stable navigable
     # line identifiers in a top-level prelude instead of splicing into syntax.
