@@ -2,7 +2,7 @@
   "paths": [
     "repo/config/extractors.toml",
     "repo/sources/extracted/.gitkeep",
-    "repo/sources/extracted/alpha-beta.txt/aced319834315e48754e633c406909ad4d01ffc4ab182cae7703ddd6e1ade05b/drv_a1ee316e4e60778f576b1ea51db8ce3155f8a9115e1113327174911846c3830e.md",
+    "repo/sources/extracted/alpha-beta.txt/aced319834315e48754e633c406909ad4d01ffc4ab182cae7703ddd6e1ade05b/drv_68f3f67d2f36a08b73eee408814f18a3e358910b8b6e38557988cf1c58492c03.md",
     "repo/sources/ledger.md",
     "repo/sources/ledger/.gitkeep",
     "repo/sources/ledger/src_ead55a946fe45b5596302fdc45e79f4b7b261cab00aaf02744b6edb7f528535c.json",
@@ -15,5 +15,5 @@
   ],
   "scenario_id": "empty-wiki-first-question",
   "schema_version": 1,
-  "tree_sha256": "0b68275906f24073514cdf01e87aca749ea6e9d7185bbd081116d9f1d6c23ae9"
+  "tree_sha256": "1ecb60bf7863918d6685df5e6cc5260ab9b78b9baf063a531856bf4c3803f6ea"
 }

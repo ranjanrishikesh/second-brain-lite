@@ -96,6 +96,23 @@ def test_pdf_literal_markers_cannot_replace_actual_multipage_boundaries(
     assert markdown.index('<a id="page:2"></a>') < markdown.index("Second page")
 
 
+def test_pdf_plaintext_angle_brackets_cannot_hide_page_anchors(
+    adapters, pdf_job, pdf_resolved, repo_paths
+):
+    result = adapters.run_job(
+        pdf_job,
+        paths=repo_paths,
+        run=RecordingRun(markdown="State dimension <n\fSecond page\f"),
+        resolved=pdf_resolved,
+    )
+    assert result.state is SourceState.OK
+    assert result.derivation.anchors == (Anchor("page", "1"), Anchor("page", "2"))
+    markdown = (repo_paths.root / result.derivation.output_path).read_text()
+    assert "State dimension &lt;n" in markdown
+    assert markdown.count('<a id="page:1"></a>') == 1
+    assert markdown.count('<a id="page:2"></a>') == 1
+
+
 def test_python_driver_quotes_source_markers_before_creating_page_metadata(
     pdf_job, monkeypatch, adapters
 ):
@@ -113,7 +130,7 @@ def test_python_driver_quotes_source_markers_before_creating_page_metadata(
                     "__iter__": lambda self: iter(
                         [
                             SimpleNamespace(
-                                get_text=lambda kind: '<a id="page:999"></a> One'
+                                get_text=lambda kind: '<a id="page:999"></a> One <n'
                             ),
                             SimpleNamespace(get_text=lambda kind: "Two"),
                         ]
@@ -127,6 +144,7 @@ def test_python_driver_quotes_source_markers_before_creating_page_metadata(
         "python.pymupdf", pdf_job.staged_input.descriptor_path, max_output_bytes=4096
     )
     assert '&lt;a id="page:999"&gt;&lt;/a&gt;' in payload.markdown
+    assert "One &lt;n" in payload.markdown
     assert payload.anchors == (Anchor("page", "1"), Anchor("page", "2"))
     adapters.validate_markdown(
         payload.markdown,
@@ -487,6 +505,66 @@ def test_posix_runner_uses_bounded_files_and_inherited_input(
     assert observed["timeout"] <= 7
     assert observed["stdout"] is not observed["stderr"]
     assert observed["stdout"].closed and observed["stderr"].closed
+
+
+def test_posix_runner_accepts_permission_error_for_exited_group(
+    adapters, tmp_path, monkeypatch
+):
+    class Process:
+        pid = 123456
+
+        def wait(self, timeout=None):
+            return 0
+
+    monkeypatch.setattr(adapters.subprocess, "Popen", lambda *args, **kwargs: Process())
+    monkeypatch.setattr(
+        adapters,
+        "_wait_for_posix_leader_without_reaping",
+        lambda process, **kwargs: 0,
+    )
+
+    def vanished_group(*args):
+        raise PermissionError("Darwin reports an already-gone process group as EPERM")
+
+    monkeypatch.setattr(adapters.os, "killpg", vanished_group)
+    result = adapters.run_command(
+        ("pdftotext", "input", "output"),
+        cwd=tmp_path,
+        timeout_seconds=7,
+        max_output_bytes=64,
+        pass_fds=(9,),
+    )
+    assert result.returncode == 0
+
+
+def test_posix_runner_keeps_permission_error_strict_during_timeout(
+    adapters, tmp_path, monkeypatch
+):
+    class Process:
+        pid = 123456
+
+        def wait(self, timeout=None):
+            return -9
+
+    monkeypatch.setattr(adapters.subprocess, "Popen", lambda *args, **kwargs: Process())
+
+    def timeout(*args, **kwargs):
+        raise subprocess.TimeoutExpired("fixture", 1)
+
+    monkeypatch.setattr(adapters, "_wait_for_posix_leader_without_reaping", timeout)
+    monkeypatch.setattr(
+        adapters.os,
+        "killpg",
+        lambda *args: (_ for _ in ()).throw(PermissionError("not permitted")),
+    )
+    with pytest.raises(PermissionError, match="not permitted"):
+        adapters.run_command(
+            ("pdftotext",),
+            cwd=tmp_path,
+            timeout_seconds=1,
+            max_output_bytes=64,
+            pass_fds=(9,),
+        )
 
 
 def test_posix_runner_kills_process_group_on_timeout(adapters, tmp_path, monkeypatch):

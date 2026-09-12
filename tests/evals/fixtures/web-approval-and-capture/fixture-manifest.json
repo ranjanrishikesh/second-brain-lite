@@ -2,7 +2,7 @@
   "paths": [
     "repo/config/extractors.toml",
     "repo/sources/extracted/.gitkeep",
-    "repo/sources/extracted/prior-standard.txt/0ca629b237a303d570cf24c422ec340ba827ef25cf960f77b9f83e995bb12d1a/drv_7e36dcc612e853cdbe89e68e9f6a265dab108e80fb1c90fdef575a111a31995c.md",
+    "repo/sources/extracted/prior-standard.txt/0ca629b237a303d570cf24c422ec340ba827ef25cf960f77b9f83e995bb12d1a/drv_41f539626e32c8c2f5d261676d848ced36b591fdf0b506e1bcada9c2c94d6da2.md",
     "repo/sources/ledger.md",
     "repo/sources/ledger/.gitkeep",
     "repo/sources/ledger/src_5fe1d396dee382c793641a395a5564ab5b26150d73937dcddfb833e527142a4d.json",
@@ -17,5 +17,5 @@
   ],
   "scenario_id": "web-approval-and-capture",
   "schema_version": 1,
-  "tree_sha256": "2087e11993cf8765319b031f4abe16b54cb0c02127a4a8b4bbf93ef210ea49b7"
+  "tree_sha256": "1c04bfbb2744253ff86d5853013421aaa49d63c12ea2de50918870e564981d95"
 }

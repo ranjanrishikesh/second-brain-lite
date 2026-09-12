@@ -18,12 +18,12 @@
     "claim_identities": [
       {
         "content_sha256": "fd25af3e32d62bbd82f09c8d7a7d355a2f4426ef0675067deb09c4064aaa1648",
-        "derivation_id": "drv_ac09b30de217409c3a859fc4c85bb05999b81ca80c0d36ab550a4cbf1de6023e",
+        "derivation_id": "drv_5ddc84ef6e91c03ac5bdec58973b1789f9d70eeef52cda74e15611a6c93b06d6",
         "source_id": "src_32cfaef006a86057e22dddc66cbbb6365d0d3616d650c3454e9d49f39c6c7414"
       },
       {
         "content_sha256": "a9df17acda9a20f513419ec4b48a39b8eb5a4b15053b636c802f733859e4654f",
-        "derivation_id": "drv_bab90cca5df82f0188f1651699a673c5a8bbb9619bb0ed02fbf4969d7c08bee6",
+        "derivation_id": "drv_d15d95dc22a54ced9dff940c236c1843d9e9d82657eb69e033a967edd3792e1e",
         "source_id": "src_4e432e9cf4d726196e7e1abbe2900181adaee3808636e2733b3c6de3fdfa0cc9"
       }
     ],

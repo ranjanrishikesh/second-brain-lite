@@ -22,4 +22,4 @@ The current local record is cited below.
 
 ## Sources
 
-[^alpha-line]: source_id: `src_32cfaef006a86057e22dddc66cbbb6365d0d3616d650c3454e9d49f39c6c7414`; content_sha256: `fd25af3e32d62bbd82f09c8d7a7d355a2f4426ef0675067deb09c4064aaa1648`; derivation_id: `drv_ac09b30de217409c3a859fc4c85bb05999b81ca80c0d36ab550a4cbf1de6023e`; anchor: `line:1`; [original](../../sources/raw/alpha-2024.txt); [extracted](../../sources/extracted/alpha-2024.txt/fd25af3e32d62bbd82f09c8d7a7d355a2f4426ef0675067deb09c4064aaa1648/drv_ac09b30de217409c3a859fc4c85bb05999b81ca80c0d36ab550a4cbf1de6023e.md#line:1)
+[^alpha-line]: source_id: `src_32cfaef006a86057e22dddc66cbbb6365d0d3616d650c3454e9d49f39c6c7414`; content_sha256: `fd25af3e32d62bbd82f09c8d7a7d355a2f4426ef0675067deb09c4064aaa1648`; derivation_id: `drv_5ddc84ef6e91c03ac5bdec58973b1789f9d70eeef52cda74e15611a6c93b06d6`; anchor: `line:1`; [original](../../sources/raw/alpha-2024.txt); [extracted](../../sources/extracted/alpha-2024.txt/fd25af3e32d62bbd82f09c8d7a7d355a2f4426ef0675067deb09c4064aaa1648/drv_5ddc84ef6e91c03ac5bdec58973b1789f9d70eeef52cda74e15611a6c93b06d6.md#line:1)

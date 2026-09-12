@@ -256,7 +256,7 @@ def test_parsed_registry_exactly_matches_the_approved_allowlist(
     assert _extractor_values(registry) == [
         {
             "id": "text",
-            "version": "1",
+            "version": "2",
             "timeout_seconds": 30,
             "max_output_bytes": 268435456,
             "mimes": ("text/plain", "text/markdown"),
@@ -374,7 +374,7 @@ def test_parsed_registry_exactly_matches_the_approved_allowlist(
         },
         {
             "id": "pdf",
-            "version": "1",
+            "version": "3",
             "timeout_seconds": 120,
             "max_output_bytes": 536870912,
             "mimes": ("application/pdf",),
@@ -752,8 +752,8 @@ def test_extractor_config_digest_is_scoped_to_one_entry(
     changed_path = tmp_path / "extractors.toml"
     changed_path.write_text(
         original_path.read_text().replace(
-            'id = "pdf"\nversion = "1"\ntimeout_seconds = 120',
-            'id = "pdf"\nversion = "1"\ntimeout_seconds = 121',
+            'id = "pdf"\nversion = "3"\ntimeout_seconds = 120',
+            'id = "pdf"\nversion = "3"\ntimeout_seconds = 121',
             1,
         )
     )
@@ -1534,7 +1534,7 @@ def test_unavailable_prerequisite_and_effective_version_have_exact_identity(
     digest = prerequisite_digest(pdf, run=missing)
 
     assert digest == hashlib.sha256(b"converter-v1\0unavailable\0pdf").hexdigest()
-    assert effective_extractor_version(pdf, digest) == f"1+{digest}"
+    assert effective_extractor_version(pdf, digest) == f"3+{digest}"
 
 
 def test_doctor_validates_registry_without_running_version_probes(

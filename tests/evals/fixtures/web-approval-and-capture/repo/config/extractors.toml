@@ -2,7 +2,7 @@ schema_version = 1
 
 [[extractors]]
 id = "text"
-version = "1"
+version = "2"
 timeout_seconds = 30
 max_output_bytes = 268435456
 mimes = ["text/plain", "text/markdown"]
@@ -72,7 +72,7 @@ argv = ["{input}", "{output}"]
 
 [[extractors]]
 id = "pdf"
-version = "1"
+version = "3"
 timeout_seconds = 120
 max_output_bytes = 536870912
 mimes = ["application/pdf"]

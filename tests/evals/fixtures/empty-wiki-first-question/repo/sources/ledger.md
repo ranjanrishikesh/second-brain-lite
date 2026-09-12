@@ -1,7 +1,7 @@
 # Source Ledger
 
 Last synchronized: 2026-09-04T12:00:00Z
-Corpus revision: `914c4daf218713ff6eae482df24bfec04890b91a9ced128bc9c586db0c2bb56e`
+Corpus revision: `02e3221f0bf9aa73092777a167f874c26073483088821cfee7722b05c155036f`
 
 ## State counts
 
@@ -21,4 +21,4 @@ Corpus revision: `914c4daf218713ff6eae482df24bfec04890b91a9ced128bc9c586db0c2bb5
 
 ## Sources
 
-- [record <code>src_ead55a946fe45b5596302fdc45e79f4b7b261cab00aaf02744b6edb7f528535c</code>](ledger/src_ead55a946fe45b5596302fdc45e79f4b7b261cab00aaf02744b6edb7f528535c.json) — ok — [raw <code>alpha-beta.txt</code>](raw/alpha-beta.txt) — [active artifact <code>sources/extracted/alpha-beta.txt/aced319834315e48754e633c406909ad4d01ffc4ab182cae7703ddd6e1ade05b/drv_a1ee316e4e60778f576b1ea51db8ce3155f8a9115e1113327174911846c3830e.md</code>](extracted/alpha-beta.txt/aced319834315e48754e633c406909ad4d01ffc4ab182cae7703ddd6e1ade05b/drv_a1ee316e4e60778f576b1ea51db8ce3155f8a9115e1113327174911846c3830e.md)
+- [record <code>src_ead55a946fe45b5596302fdc45e79f4b7b261cab00aaf02744b6edb7f528535c</code>](ledger/src_ead55a946fe45b5596302fdc45e79f4b7b261cab00aaf02744b6edb7f528535c.json) — ok — [raw <code>alpha-beta.txt</code>](raw/alpha-beta.txt) — [active artifact <code>sources/extracted/alpha-beta.txt/aced319834315e48754e633c406909ad4d01ffc4ab182cae7703ddd6e1ade05b/drv_68f3f67d2f36a08b73eee408814f18a3e358910b8b6e38557988cf1c58492c03.md</code>](extracted/alpha-beta.txt/aced319834315e48754e633c406909ad4d01ffc4ab182cae7703ddd6e1ade05b/drv_68f3f67d2f36a08b73eee408814f18a3e358910b8b6e38557988cf1c58492c03.md)
