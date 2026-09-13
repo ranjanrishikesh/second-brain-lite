@@ -1600,6 +1600,19 @@ def _process_record(
         if derivation is None:
             return prepared, result, None, None, None
 
+        activation_derivation = derivation
+        retained_derivation = prepared.derivations.get(derivation.derivation_id)
+        if retained_derivation is not None:
+            replayed_derivation = replace(
+                derivation,
+                created_at=retained_derivation.created_at,
+            )
+            if replayed_derivation != retained_derivation:
+                raise ValueError(
+                    "derivation_id collision would replace retained history"
+                )
+            activation_derivation = retained_derivation
+
         artifact_callback_started = False
 
         def activate_pinned(
@@ -1611,8 +1624,8 @@ def _process_record(
         ]:
             nonlocal activation_guard, artifact_callback_started
             artifact_callback_started = True
-            _validate_pinned_process_artifact(derivation, artifact)
-            final = activate_derivation(prepared, derivation, now=now)
+            _validate_pinned_process_artifact(activation_derivation, artifact)
+            final = activate_derivation(prepared, activation_derivation, now=now)
             representation = representation_for(
                 final,
                 final.active_content_sha256 or "",

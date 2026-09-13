@@ -1738,6 +1738,75 @@ def test_new_warning_derivation_is_searchable_and_reported_fresh(
     assert "partial_text" in {item.code for item in report.coverage_gaps}
 
 
+def test_processing_reactivates_identical_retained_derivation(
+    repo_root: Path,
+) -> None:
+    registry = make_registry()
+    item = make_item(content_sha256=CONTENT_SHA256)
+    paths = RepoPaths.discover(repo_root)
+    materialize_item(paths, item, CONTENT_BYTES)
+    first, _ = reconcile_inventory(
+        InventoryReport((item,), ()),
+        {},
+        registry=registry,
+        processor=WarningProcessor(),
+        paths=paths,
+        prerequisite_digests=prerequisite_map(registry),
+        now=FIXED_NOW,
+    )
+    original = next(iter(first.values()))
+    original_derivation = original.derivations[original.active_derivation_id or ""]
+    retry_at = FIXED_NOW.replace(day=FIXED_NOW.day + 1)
+
+    class ReplayProcessor:
+        def process(
+            self,
+            record: SourceRecord,
+            item: InventoryItem,
+            extractor: ExtractorSpec,
+            *,
+            paths: RepoPaths,
+            context: ProcessingContext,
+        ) -> ProcessResult:
+            del item, extractor, paths
+            retained = record.derivations[record.active_derivation_id or ""]
+            diagnostic = Diagnostic("partial_text", "Searchable with a limitation.")
+            attempt = ProcessingAttempt(
+                context.input_sha256,
+                retained.extractor_id,
+                context.extractor_version,
+                context.config_sha256,
+                context.prerequisite_digest,
+                SourceState.WARNING,
+                context.attempted_at,
+                (diagnostic.code,),
+            )
+            return ProcessResult(
+                SourceState.WARNING,
+                replace(retained, created_at=context.attempted_at),
+                attempt,
+                (diagnostic,),
+            )
+
+    updated, report = reconcile_inventory(
+        InventoryReport((item,), ()),
+        first,
+        registry=registry,
+        processor=ReplayProcessor(),
+        paths=paths,
+        prerequisite_digests=prerequisite_map(registry),
+        explicit_retry=True,
+        now=retry_at,
+    )
+
+    result = updated[original.source_id]
+    assert result.state is SourceState.WARNING
+    assert result.active_derivation_id == original_derivation.derivation_id
+    assert result.derivations[original_derivation.derivation_id] is original_derivation
+    assert result.updated_at == retry_at
+    assert report.decision_counts[SyncAction.PROCESS] == 1
+
+
 def test_failed_processing_retains_an_older_valid_active_representation(
     repo_root: Path,
 ) -> None:

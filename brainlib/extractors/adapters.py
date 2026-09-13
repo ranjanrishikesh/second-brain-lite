@@ -1115,15 +1115,17 @@ def run_job(
     except ExtractionQualityError as error:
         state = (
             SourceState.NEEDS_AGENT
-            if job.extractor.extractor_id == "image"
-            and job.extractor.agent_fallback
-            and error.code
-            in {
-                "low_confidence_ocr",
-                "empty_extraction",
-                "converter_failed",
-                "missing_converter_output",
-            }
+            if job.extractor.agent_fallback
+            and (
+                error.code == "empty_extraction"
+                or job.extractor.extractor_id == "image"
+                and error.code
+                in {
+                    "low_confidence_ocr",
+                    "converter_failed",
+                    "missing_converter_output",
+                }
+            )
             else SourceState.FAILED
         )
         return _failure(job, error.code, str(error), state=state)

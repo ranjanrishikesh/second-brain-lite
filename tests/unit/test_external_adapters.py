@@ -62,14 +62,37 @@ def test_pdf_uses_resolved_converter_and_page_anchors(
     assert result.derivation.anchors == (Anchor("page", "1"),)
 
 
-def test_empty_converter_output_is_failed(adapters, pdf_job, pdf_resolved, repo_paths):
+def test_empty_converter_output_requests_configured_agent(
+    adapters, pdf_job, pdf_resolved, repo_paths
+):
     result = adapters.run_job(
         pdf_job,
         paths=repo_paths,
         run=RecordingRun(markdown=""),
         resolved=pdf_resolved,
     )
+    assert result.state is SourceState.NEEDS_AGENT
+    assert result.derivation is None
+    assert result.diagnostics[0].code == "empty_extraction"
+
+
+def test_empty_converter_output_without_agent_fallback_is_failed(
+    adapters, pdf_job, pdf_resolved, repo_paths
+):
+    job = replace(
+        pdf_job,
+        extractor=replace(
+            pdf_job.extractor, agent_fallback=False, agent_revision=None
+        ),
+    )
+    result = adapters.run_job(
+        job,
+        paths=repo_paths,
+        run=RecordingRun(markdown=""),
+        resolved=pdf_resolved,
+    )
     assert result.state is SourceState.FAILED
+    assert result.derivation is None
     assert result.diagnostics[0].code == "empty_extraction"
 
 
