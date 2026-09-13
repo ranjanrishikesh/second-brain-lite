@@ -81,7 +81,7 @@ mode = "command"
 output_suffix = ".md"
 anchors = ["page"]
 agent_fallback = true
-agent_revision = "1"
+agent_revision = "2"
 [extractors.preferred]
 id = "poppler.pdftotext"
 executable = "pdftotext"
